@@ -76,7 +76,7 @@ body{margin:0;background:var(--paper)}
 /* ===== DESKTOP (>=1100px): the flat-card design ===== */
 #site-desktop{
 
-#top,#stack,#work,#morsel,#now,#hello{scroll-margin-top:86px}
+#top,#stack,#work,#morsel,#play,#now,#hello{scroll-margin-top:86px}
 &{margin:0;background:var(--paper);color:var(--ink);font-family:var(--display);font-size:18.5px;line-height:1.72;-webkit-font-smoothing:antialiased}
 a{color:var(--green);text-decoration:none}
 a:hover{text-decoration:underline;text-underline-offset:3px}
@@ -201,6 +201,36 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 #morsel .qrbox span{font-size:12.5px;color:#555}
 @media (min-width:761px){#morsel .getapp a:first-child{display:none}}
 #site-desktop #morsel, #morsel{padding-bottom:64px !important}
+#play{background:var(--sage)}
+#play .huntcard{background:var(--cream);border-radius:24px;padding:clamp(26px,4.5vw,42px) clamp(20px,4.5vw,46px);margin-top:clamp(36px,5vw,56px);text-align:center}
+#play .huntrule{font-size:1rem;color:var(--muted)}
+#play .huntrule b{color:var(--ink)}
+#play .hunters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(12px,2vw,20px);margin-top:26px}
+#play .vill{appearance:none;border:0;background:var(--paper);border-radius:18px;padding:18px 14px 20px;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column;align-items:center;gap:10px;transition:transform .2s ease,box-shadow .2s ease}
+#play .vill:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 0 0 2px var(--gold)}
+#play .vill:disabled{cursor:default}
+#play .vill svg{width:84px;height:auto;display:block;overflow:visible}
+#play .vtext{display:flex;flex-direction:column;gap:6px}
+#play .huntnext[hidden]{display:none}
+#play .vname{font:600 .78rem var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--goldtext)}
+#play .vsay{font-style:italic;font-size:.98rem;line-height:1.45}
+#play .huntmsg{margin-top:24px;font-style:italic;font-weight:700;font-size:1.12rem;color:var(--green);min-height:1.6em}
+#play .huntmsg.bad{color:var(--seal)}
+#play .huntctl{margin-top:16px}
+#play .hellolinks{margin-top:34px}
+#play .apple,#play .body{transform-box:fill-box;transform-origin:50% 100%}
+#play .vill.hit .apple{animation:burst .45s ease forwards}
+#play .vill.faint .body{animation:faint .6s ease forwards}
+#play .vill.faint{opacity:.75}
+@keyframes burst{to{transform:scale(1.8);opacity:0}}
+@keyframes faint{to{transform:translate(-10px,-22px) rotate(80deg) scale(.8)}}
+@media (max-width:640px){
+  #play .hunters{grid-template-columns:1fr}
+  #play .vill{flex-direction:row;text-align:left;align-items:center;gap:14px;padding:14px 16px}
+  #play .vill svg{width:56px;flex:none}
+  #play .vtext{display:flex;flex-direction:column;gap:4px}
+}
+@media (prefers-reduced-motion: reduce){#play .vill.hit .apple{animation:none;opacity:0}#play .vill.faint .body{animation:none;transform:translate(-10px,-22px) rotate(80deg) scale(.8)}#play .vill{transition:none}}
 </style>
 </head>
 <body>
@@ -210,6 +240,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     <div class="links">
       <a href="#work">Work</a>
       <a href="#morsel">Morsel Jar</a>
+      <a href="#play">Play</a>
       <a href="#now">Now</a>
       <a class="pill" href="#hello">Say hello</a>
     </div>
@@ -332,6 +363,27 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
         <span>Scan to get Morsel Jar</span>
       </div>
     </div>
+  </div>
+</section>
+
+<section class="band" id="play">
+  <div class="shell">
+    <p class="kicker">Just for fun</p>
+    <h2 class="statement">And a game, in one evening.</h2>
+    <p class="lede">Robin Hoodwinked is a silly medieval archery game I built with Claude Code at a Claude Community Build Day in San Francisco. Someone stole the King's pie. The thief always lies, everyone else tells the truth, and you settle it with a bow.</p>
+    <div class="huntcard">
+      <p class="huntrule"><b>Try one here.</b> Read what they say, then tap the thief's apple.</p>
+      <div class="hunters" role="group" aria-label="Three villagers. Pick the one who stole the pie."></div>
+      <p class="huntmsg" aria-live="polite">One of them is lying.</p>
+      <div class="huntctl">
+        <button type="button" class="pill ghost huntnext" hidden>Another round</button>
+      </div>
+    </div>
+    <div class="hellolinks">
+      <a class="pill" href="/robin-hoodwinked/">Play Robin Hoodwinked</a>
+      <a class="pill ghost" href="https://github.com/babusovereign/robin-hoodwinked" target="_blank" rel="noopener">Read the source</a>
+    </div>
+    <p class="fine">The full game has ten rounds, wind, three arrows a round, and a King whose hat is very much in the way.</p>
   </div>
 </section>
 
@@ -568,11 +620,61 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 <script>
 (function(){
   if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  var els=document.querySelectorAll('.card,.lcard,.jarcard,.statement,.bioband .inner,.photocard');
+  var els=document.querySelectorAll('.card,.lcard,.jarcard,.huntcard,.statement,.bioband .inner,.photocard');
   els.forEach(function(el){el.classList.add('reveal')});
   if(!('IntersectionObserver' in window)){els.forEach(function(el){el.classList.add('in')});return}
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -40px 0px'});
   els.forEach(function(el){io.observe(el)});
+})();
+</script>
+<script>
+(function(){
+  var box=document.querySelector('#play .hunters');if(!box)return;
+  var msg=document.querySelector('#play .huntmsg'),next=document.querySelector('#play .huntnext');
+  // Original teaser rounds (not the game's ten). Claim: [type,target]; t=is thief, n=not thief.
+  var ROUNDS=[
+    [{n:'Wat the Weaver',c:['n',1],s:'Hilda did not take it. She was weeding all day.'},
+     {n:'Hilda Hoe',c:['t',2],s:'Pell took it. He smells of pastry.'},
+     {n:'Pell the Piper',c:['t',1],s:'Hilda did it! Look at her muddy hands!'}],
+    [{n:'Goody Marsh',c:['n',0],s:'I did not take the pie. I am a sweet old lady.'},
+     {n:'Fenwick',c:['t',0],s:'Goody Marsh took it. Ask her cat.'},
+     {n:'Old Rook',c:['n',1],s:'Fenwick did not do it. He is scared of pies.'}],
+    [{n:'Ralph Ricketts',c:['t',1],s:'Dame Tansy is the thief!'},
+     {n:'Dame Tansy',c:['t',0],s:'Ralph took it. I would never.'},
+     {n:'Elsbeth',c:['n',0],s:'Ralph did not take it. He was with me.'}]
+  ];
+  // Same rule as the game's solve(): every round must have exactly one possible thief.
+  function solve(r){var out=[];for(var th=0;th<3;th++){var ok=r.every(function(v,i){var said=v.c[0]==='t'?v.c[1]===th:v.c[1]!==th;return i===th?!said:said});if(ok)out.push(th)}return out}
+  ROUNDS=ROUNDS.filter(function(r){return solve(r).length===1});
+  if(!ROUNDS.length)return;
+  var HUES=['var(--r1)','var(--r4)','var(--r2)'];
+  function svg(i){return '<svg viewBox="0 0 80 110" aria-hidden="true" focusable="false">'+
+    '<g class="body"><rect x="16" y="66" width="48" height="40" rx="16" fill="'+HUES[i]+'"/>'+
+    '<circle cx="40" cy="48" r="20" fill="var(--sage)" stroke="var(--ink)" stroke-width="2.5"/>'+
+    '<circle cx="33" cy="46" r="2.4" fill="var(--ink)"/><circle cx="47" cy="46" r="2.4" fill="var(--ink)"/>'+
+    '<path d="M33 56 q7 5 14 0" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round"/>'+
+    '<g class="apple"><circle cx="40" cy="20" r="11" fill="var(--seal)"/><path d="M40 10 q1 -6 6 -7" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/><ellipse cx="46" cy="7" rx="4" ry="2" fill="var(--green)"/></g></g></svg>'}
+  var ri=Math.floor(Math.random()*ROUNDS.length),done=false;
+  function render(){
+    var r=ROUNDS[ri];done=false;box.innerHTML='';msg.textContent='One of them is lying.';msg.classList.remove('bad');next.hidden=true;
+    r.forEach(function(v,i){
+      var b=document.createElement('button');b.type='button';b.className='vill';
+      b.setAttribute('aria-label','Shoot the apple on '+v.n+"'s head. "+v.n+' says: '+v.s);
+      b.innerHTML=svg(i)+'<span class="vtext"><span class="vname">'+v.n+'</span><span class="vsay">“'+v.s+'”</span></span>';
+      b.addEventListener('click',function(){shoot(i,b)});
+      box.appendChild(b);
+    });
+  }
+  function shoot(i,b){
+    if(done)return;done=true;
+    var r=ROUNDS[ri],th=solve(r)[0];
+    [].forEach.call(box.children,function(el){el.disabled=true});
+    if(i===th){b.classList.add('hit');msg.classList.remove('bad');msg.textContent='Splat! '+r[i].n+' was lying. Pie recovered.'}
+    else{b.classList.add('faint');msg.classList.add('bad');msg.textContent='Poor '+r[i].n+' fainted. They were telling the truth. It was '+r[th].n+'.'}
+    next.hidden=false;
+  }
+  next.addEventListener('click',function(){ri=(ri+1)%ROUNDS.length;render();var f=box.querySelector('button');if(f)f.focus()});
+  render();
 })();
 </script>
 </body>
