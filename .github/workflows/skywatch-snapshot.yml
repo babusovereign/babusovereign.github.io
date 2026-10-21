@@ -1,0 +1,46 @@
+name: SkyWatch snapshot
+# Every 30 minutes: fetch openly licensed flight data (adsb.lol, ODbL) for busy regions, add routes
+# (Virtual Radar Server standing data, CC0), drop privacy-flagged aircraft, and publish snapshot.json
+# to the skywatch-data branch. Free for public repos; no secrets beyond the built-in GITHUB_TOKEN.
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [skywatch-live]
+    paths: [".github/workflows/skywatch-snapshot.yml", ".github/skywatch/**"]
+permissions:
+  contents: write
+concurrency:
+  group: skywatch-snapshot
+  cancel-in-progress: false
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/skywatch
+      - name: Get routes and airports (CC0)
+        run: |
+          git clone -q --depth 1 --filter=blob:none --sparse https://github.com/vradarserver/standing-data /tmp/sd
+          git -C /tmp/sd sparse-checkout set routes airports
+      - name: Build snapshot
+        run: python3 .github/skywatch/snapshot.py /tmp/sd /tmp/snapshot.json
+      - name: Publish to skywatch-data branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir /tmp/pub && cd /tmp/pub
+          cp /tmp/snapshot.json .
+          printf '%s\n' "# SkyWatch snapshot data" "" \
+            "Auto-generated every 30 minutes for https://babusovereign.com/builds/skywatch/." "" \
+            "- Flight data (c) adsb.lol contributors, Open Database License (ODbL) 1.0. This snapshot is a derived database, also offered under ODbL 1.0." \
+            "- Routes and airports: Virtual Radar Server standing data, CC0 1.0." \
+            "- Aircraft flagged for privacy (PIA, FAA LADD) are excluded; no registrations or owner data are stored." > README.md
+          git init -q -b skywatch-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add . && git commit -q -m "Snapshot $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" skywatch-data
