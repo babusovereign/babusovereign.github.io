@@ -395,14 +395,14 @@ document.querySelectorAll(".chip").forEach(c => c.onclick = () => askChip(c.text
 
 let t; map.on("moveend", () => { clearTimeout(t); t = setTimeout(refresh, 400); });
 // ===================== live mode, briefings and chat (Cloudflare Worker, free tier) =====================
-const API = "__API_URL__";
-const SITEKEY = "__TURNSTILE_SITEKEY__";
+const API = "https://skywatch-api.babusovereign.workers.dev";
+const SITEKEY = "0x4AAAAAAFfsHx-sd93jUbEk";
 let MODE = "demo", HUMAN = null, HUMAN_AT = 0, PASS = null, PASS_EXP = 0, LIVE_LEFT = 3, liveTimer = null, tickTimer = null;
 
 function turnstileToken() {
   return new Promise((resolve, reject) => {
     const go = () => {
-      const id = turnstile.render("#ts", { sitekey:SITEKEY, size:"invisible", appearance:"interaction-only",
+      const id = turnstile.render("#ts", { sitekey:SITEKEY, action:"skywatch", appearance:"interaction-only",
         callback:t => { resolve(t); setTimeout(() => turnstile.remove(id), 0); },
         "error-callback":() => { reject(new Error("Couldn't confirm you're human. Refresh and try again.")); turnstile.remove(id); } });
     };
@@ -411,12 +411,12 @@ function turnstileToken() {
 }
 async function human() {
   if (HUMAN && Date.now() - HUMAN_AT < 50 * 60 * 1000) return HUMAN;
-  const r = await fetch(API + "/verify", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ token: await turnstileToken() }) });
+  const r = await fetch(API + "/verify", { referrerPolicy:"no-referrer-when-downgrade", method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ token: await turnstileToken() }) });
   const d = await r.json(); if (!r.ok) throw new Error(d.error || "Verification failed.");
   HUMAN = d.human; HUMAN_AT = Date.now(); LIVE_LEFT = d.liveLeft; setModeUI(); return HUMAN;
 }
 async function post(path, body) {
-  const r = await fetch(API + path, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ ...body, human: await human() }) });
+  const r = await fetch(API + path, { referrerPolicy:"no-referrer-when-downgrade", method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ ...body, human: await human() }) });
   const d = await r.json().catch(() => ({}));
   if (r.status === 401) { HUMAN = null; throw new Error("Session check expired. Please try again."); }
   if (!r.ok) throw new Error(d.error || "Something went wrong.");
@@ -460,7 +460,7 @@ async function fetchLive() {
   if (MODE !== "live" || !PASS) return;
   const c = map.getCenter(), r = liveRadiusNm();
   try {
-    const res = await fetch(`${API}/live?lat=${c.lat.toFixed(2)}&lon=${c.lng.toFixed(2)}&r=${r}`, { headers:{ "X-Pass":PASS } });
+    const res = await fetch(`${API}/live?lat=${c.lat.toFixed(2)}&lon=${c.lng.toFixed(2)}&r=${r}`, { referrerPolicy:"no-referrer-when-downgrade", headers:{ "X-Pass":PASS } });
     if (res.status === 401) return backToDemo("Live session finished — back to the recorded demo.");
     const d = await res.json(); if (!res.ok) throw new Error(d.error || res.status);
     applyLive(d);
@@ -510,7 +510,7 @@ async function serve(payload, T, A) {
     const f = payload.flight;
     const d = await post("/brief", { flight:{ id:f.id, cs:f.cs, lat:f.lat, lon:f.lon, alt:f.alt, spd:f.spd, hdg:f.hdg, vr:f.vr, ground:f.ground, type:f.type || null } });
     T.querySelector(".think")?.remove();
-    A.innerHTML = `<div class="ans">${md(d.text)}${stamp(d.ai ? "AI summary of public data · adsb.lol routes · Llama 3.1 8B on Cloudflare · may contain errors" : `Public route data · adsb.lol${d.resting ? " · AI resting until 5 PM PT" : ""}`)}</div>`;
+    A.innerHTML = `<div class="ans">${md(d.text)}${stamp(d.ai ? "AI summary of public data · adsb.lol routes · built from public data" : `Public route data · adsb.lol${d.resting ? " · AI resting until 5 PM PT" : ""}`)}</div>`;
     return;
   }
   const c = map.getCenter();
