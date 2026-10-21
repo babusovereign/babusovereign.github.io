@@ -705,38 +705,116 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 })();
 </script>
 <script id="herosky-js">
-/* Simulated flights gliding freely behind the hero, in the four thread colors. An homage to SkyWatch.
-   Plane shape: Material Icons "flight" (Apache License 2.0, Google). */
+/* Hero air show: a nod to SkyWatch and San Francisco Fleet Week. A generic blue-and-gold jet team (no insignia)
+   flies a randomized program behind the hero, loosely modeled on a real demonstration show: delta and diamond
+   passes, echelon and line-abreast passes, formation rolls, sweeping turns, opposing solos crossing, and now and
+   then a break-out or join-up. Every path is a smooth spline (no hairpins), so the motion never jerks, and every act is flown ahead of time to make sure no two jets ever touch. */
 (function(){
-  var cv=document.querySelector('.skycv'); if(!cv||!cv.getContext) return;
-  var ctx=cv.getContext('2d'), wrap=cv.parentNode, planes=[], W=0, H=0, dpr=1, cols=[], running=false, last=0, raf=0;
+  var cv=document.querySelector('.skycv'); if(!cv||!cv.getContext||!window.Path2D) return;
+  var ctx=cv.getContext('2d'), wrap=cv.parentNode, W=0, H=0, dpr=1, running=false, last=0, raf=0;
   var still=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var shape=window.Path2D?new Path2D('M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z'):null;
-  if(!shape) return;
-  function readCols(){var cs=getComputedStyle(document.documentElement);cols=['--r1','--r2','--r3','--r4'].map(function(v){return cs.getPropertyValue(v).trim()||'#206b4e'});planes.forEach(function(p){p.c=cols[p.ci]})}
-  function mk(){var ci=Math.floor(Math.random()*4),h=Math.random()*Math.PI*2;return{x:Math.random()*W,y:Math.random()*H,h:h,goal:h,next:6+Math.random()*14,v:16+Math.random()*14,s:20+Math.random()*9,a:.36+Math.random()*.14,ci:ci,c:cols[ci]}}
-  function size(){var r=wrap.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);W=r.width;H=r.height;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
-    var n=Math.max(6,Math.min(16,Math.round(W*H/70000)));while(planes.length<n)planes.push(mk());planes.length=n;if(!running)draw()}
-  function plane(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.h);
-    var L=p.s*5.5,g=ctx.createLinearGradient(-L,0,-p.s*.45,0);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,p.c);
-    ctx.globalAlpha=p.a*.5;ctx.strokeStyle=g;ctx.lineWidth=Math.max(1.2,p.s*.07);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-L,0);ctx.lineTo(-p.s*.45,0);ctx.stroke();
-    ctx.globalAlpha=p.a;ctx.fillStyle=p.c;ctx.rotate(Math.PI/2);var k=p.s/20;ctx.scale(k,k);ctx.translate(-11.5,-12);ctx.fill(shape);ctx.restore()}
-  function draw(){ctx.clearRect(0,0,W,H);for(var i=0;i<planes.length;i++)plane(planes[i])}
-  function step(ts){if(!running)return;var dt=Math.min((ts-(last||ts))/1000,.1);last=ts;var m=140;
-    for(var i=0;i<planes.length;i++){var p=planes[i];
-      p.next-=dt;if(p.next<=0){p.goal=p.h+(Math.random()<.5?-1:1)*(.2+Math.random()*.4);p.next=10+Math.random()*16}
-      var d=Math.atan2(Math.sin(p.goal-p.h),Math.cos(p.goal-p.h));p.h+=Math.max(-.12*dt,Math.min(.12*dt,d));
-      p.x+=Math.cos(p.h)*p.v*dt;p.y+=Math.sin(p.h)*p.v*dt;
-      if(p.x>W+m)p.x=-m;else if(p.x<-m)p.x=W+m;if(p.y>H+m)p.y=-m;else if(p.y<-m)p.y=H+m}
-    draw();raf=requestAnimationFrame(step)}
+  var jet=new Path2D('M13 0L9 -1.2L4 -1.8L-3 -9L-6 -9L-4.5 -2.4L-8.5 -2.2L-11 -6L-13 -6L-12 -1.6L-13 -0.8L-13 0.8L-12 1.6L-13 6L-11 6L-8.5 2.2L-4.5 2.4L-6 9L-3 9L4 1.8L9 1.2Z');
+  var SH={
+    delta:[[0,0],[-24,-18],[-24,18],[-48,0],[-48,-36],[-48,36]],
+    diamond:[[0,0],[-24,-20],[-24,20],[-48,0]],
+    echelon:[[0,0],[-22,20],[-44,40],[-66,60]],
+    abreast:[[0,0],[-3,-30],[-3,30],[-6,-60],[-6,60]],
+    single:[[0,0]]};
+  /* The team flies short sets of 1-3 passes, then disappears for 15-45 s, as if it were working another part of the city */
+  var show={groups:[],wait:2,last:'',left:1+Math.floor(Math.random()*3)}, ghosts=[];
+  function rnd(a,b){return a+Math.random()*(b-a)}
+  function sstep(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
+  function dark(){var t=document.documentElement.getAttribute('data-theme');return t?t==='dark':!!(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)}
+  function seal(){var e=document.querySelector('.hero .portraitseal'),w=wrap.getBoundingClientRect();
+    if(!e)return{x:W*.78,y:H*.5,r:Math.min(W,H)*.2};var r=e.getBoundingClientRect();return{x:r.left-w.left+r.width/2,y:r.top-w.top+r.height/2,r:r.width/2}}
+  function size(){var r=wrap.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);W=r.width;H=r.height;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);if(!running)draw()}
+  /* ---- paths ---- */
+  function spline(pts){var out=[];for(var i=0;i<pts.length-1;i++){var p0=pts[Math.max(i-1,0)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(i+2,pts.length-1)];
+      for(var j=0;j<20;j++){var t=j/20,t2=t*t,t3=t2*t;out.push([.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3),.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)])}}
+    out.push(pts[pts.length-1]);var L=[0];for(var k=1;k<out.length;k++)L.push(L[k-1]+Math.hypot(out[k][0]-out[k-1][0],out[k][1]-out[k-1][1]));return{p:out,L:L,len:L[L.length-1]}}
+  function smooth(path){var P=path.p,L=path.L,prev=null,lastD=0;for(var i=1;i<P.length;i++){if(L[i]-lastD<24)continue;var a=P[i-1],b=P[i];var h=Math.atan2(b[1]-a[1],b[0]-a[0]);
+      if(prev!==null){var d=Math.abs(Math.atan2(Math.sin(h-prev),Math.cos(h-prev)));if(d>.28)return false}prev=h;lastD=L[i]}return true}
+  function at(path,d){var L=path.L,lo=0,hi=L.length-1;if(d<=0)d=0;if(d>=path.len)d=path.len-.01;while(hi-lo>1){var m=(lo+hi)>>1;if(L[m]<=d)lo=m;else hi=m}
+    var a=path.p[lo],b=path.p[hi],f=(d-L[lo])/((L[hi]-L[lo])||1);return{x:a[0]+(b[0]-a[0])*f,y:a[1]+(b[1]-a[1])*f,h:Math.atan2(b[1]-a[1],b[0]-a[0])}}
+  function distTo(path,X){var best=0,bd=1e9;for(var i=0;i<path.p.length;i++){var d=Math.hypot(path.p[i][0]-X[0],path.p[i][1]-X[1]);if(d<bd){bd=d;best=i}}return path.L[best]}
+  var O=230;
+  function edge(side){return side===0?[-O,H*rnd(.12,.88)]:side===1?[W+O,H*rnd(.12,.88)]:side===2?[W*rnd(.08,.92),-O]:[W*rnd(.08,.92),H+O]}
+  function opp(side){return side^1}
+  /* A gentle route from one edge to another: optional point it must pass through, and a bend (1 = arc, 2 = S-curve) */
+  function route(opt){opt=opt||{};for(var tries=0;tries<30;tries++){
+      var s1=opt.from!=null?opt.from:Math.floor(Math.random()*4),s2=opt.to!=null?opt.to:(Math.random()<.75?opp(s1):(s1<2?2+Math.floor(Math.random()*2):Math.floor(Math.random()*2)));
+      var A=opt.A||edge(s1),B=opt.B||edge(s2),dx=B[0]-A[0],dy=B[1]-A[1],len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len,amp=Math.min(W,H)*rnd(.08,opt.bend===2?.22:.3)*(Math.random()<.5?-1:1),pts=[A];
+      if(opt.via){var V=opt.via;pts.push([(A[0]+V[0])/2+nx*amp*.5,(A[1]+V[1])/2+ny*amp*.5],V,[(B[0]+V[0])/2+nx*amp*(opt.bend===2?-.5:.5),(B[1]+V[1])/2+ny*amp*(opt.bend===2?-.5:.5)])}
+      else if(opt.bend===2){pts.push([A[0]+dx*.33+nx*amp,A[1]+dy*.33+ny*amp],[A[0]+dx*.66-nx*amp,A[1]+dy*.66-ny*amp])}
+      else{pts.push([A[0]+dx*.5+nx*amp,A[1]+dy*.5+ny*amp])}
+      pts.push(B);var P=spline(pts);if(smooth(P))return P}
+    return spline([[-O,H*.4],[W+O,H*.5]])}
+  /* A sweeping turn of about 200-260 degrees around an open point away from the portrait */
+  function sweep(){var c=seal(),m=Math.min(W,H);for(var tries=0;tries<30;tries++){var R=m*rnd(.26,.36),C=[W*rnd(.2,.6),H*rnd(.35,.65)];
+      if(Math.hypot(C[0]-c.x,C[1]-c.y)<R+c.r+30)continue;var dir=Math.random()<.5?1:-1,a0=rnd(0,2*Math.PI),span=rnd(3.5,4.5),pts=[];
+      var t0=[Math.cos(a0+dir*Math.PI/2),Math.sin(a0+dir*Math.PI/2)],s0=[C[0]+Math.cos(a0)*R,C[1]+Math.sin(a0)*R];pts.push([s0[0]-t0[0]*Math.max(W,H)*.9,s0[1]-t0[1]*Math.max(W,H)*.9]);
+      for(var i=0;i<=12;i++){var a=a0+dir*span*i/12;pts.push([C[0]+Math.cos(a)*R,C[1]+Math.sin(a)*R])}
+      var a1=a0+dir*span,t1=[Math.cos(a1+dir*Math.PI/2),Math.sin(a1+dir*Math.PI/2)],e1=pts[pts.length-1];pts.push([e1[0]+t1[0]*Math.max(W,H)*.9,e1[1]+t1[1]*Math.max(W,H)*.9]);
+      var P=spline(pts);if(smooth(P))return P}return route()}
+  /* ---- the program ---- */
+  function grp(o){return{shape:o.shape,s2:o.s2||o.shape,m:o.m==null?.5:o.m,f:o.f||[[0,1],[1,1]],roll:o.roll||null,knife:o.knife||null,path:o.path,d:entry(o.path),v:o.v,delay:o.delay||0,trails:SH[o.shape].map(function(){return[]}),done:false}}
+  /* Start each path just outside the visible area, and end it as soon as the whole formation has left */
+  function inView(pt,m){return pt[0]>-m&&pt[0]<W+m&&pt[1]>-m&&pt[1]<H+m}
+  function entry(P){for(var i=0;i<P.p.length;i++)if(inView(P.p[i],150))return Math.max(0,P.L[i]-30);return 0}
+  function sync(groups,X){var ds=groups.map(function(g){return (distTo(g.path,X)-g.d)/g.v}),mx=Math.max.apply(null,ds),gap=rnd(.55,.8);groups.forEach(function(g,i){g.delay=mx-ds[i]+i*gap})}
+  /* Deconfliction: fly the whole act ahead of time and reject it if any two jets would ever touch */
+  function safe(groups){var k=W<600?1:1.4,min=30*k,st=groups.map(function(g){return{d:g.d,delay:g.delay}}),dt=.04;
+    for(var t=0;t<60;t+=dt){var pts=[],alive=0;groups.forEach(function(g,gi){var q=st[gi];if(q.delay>0){q.delay-=dt;alive++;return}q.d+=g.v*dt;if(q.d>=g.path.len)return;alive++;var keep=g.d;g.d=q.d;for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i);J.g=gi;J.i=i;pts.push(J)}g.d=keep});
+      for(var a=0;a<pts.length;a++)for(var b=a+1;b<pts.length;b++){var lim=pts[a].g===pts[b].g?min:min*1.6;if(Math.hypot(pts[a].x-pts[b].x,pts[a].y-pts[b].y)<lim)return false}
+      if(!alive)break}return true}
+  function V(){return W<600?125:170}
+  function rollWin(){var u=rnd(.3,.55);return[u,u+rnd(.16,.24)]}
+  var ACTS={
+    deltaPass:{w:3,run:function(){var c=seal();return[grp({shape:'delta',path:route(Math.random()<.5?{via:[c.x,c.y]}:{}),v:V(),roll:Math.random()<.35?rollWin():null})]}},
+    maneuveringDelta:{w:2,run:function(){return[grp({shape:'delta',path:route({bend:2}),v:V()})]}},
+    echelonParade:{w:2,run:function(){return[grp({shape:'diamond',s2:'echelon',m:rnd(.35,.55),path:Math.random()<.5?sweep():route(),v:V()})]}},
+    diamondRoll:{w:2,run:function(){var c=seal();return[grp({shape:'diamond',path:route(Math.random()<.5?{via:[c.x,c.y]}:{bend:1}),v:V(),roll:rollWin()})]}},
+    lineAbreast:{w:2,run:function(){return[grp({shape:'abreast',path:route({from:Math.random()<.5?0:1}),v:V()*.9})]}},
+    burnerTurn:{w:2,run:function(){return[grp({shape:'diamond',path:sweep(),v:V()*1.05})]}},
+    opposingSolos:{w:2,run:function(){var c=seal(),X=Math.random()<.45?[c.x,c.y]:[W*rnd(.25,.6),H*rnd(.3,.7)],s=Math.random()<.5?0:2;
+      var g=[grp({shape:'single',path:route({from:s,to:opp(s),via:X}),v:V()*1.35,knife:true}),grp({shape:'single',path:route({from:opp(s),to:s,via:X}),v:V()*1.35,knife:true})];g.forEach(function(x){x.X=X});sync(g,X);return g}},
+    deltaBreakout:{w:1,run:function(){return[grp({shape:'delta',path:route({bend:1}),v:V(),f:[[0,1],[.45,1],[.85,6],[1,7]]})]}},
+    joinUp:{w:1,run:function(){return[grp({shape:'delta',path:route({bend:1}),v:V(),f:[[0,5.5],[.42,1],[1,1]]})]}},
+    crossCenter:{w:1,run:function(){var X=[W*rnd(.3,.6),H*rnd(.35,.65)],sides=[0,1,2,3],g=sides.map(function(s){return grp({shape:'single',path:route({from:s,to:s<2?opp(s):(s===2?3:2),via:X}),v:V()*1.2})});sync(g,X);return g}}
+  };
+  function nextAct(){var names=Object.keys(ACTS).filter(function(n){return n!==show.last}),tot=0;names.forEach(function(n){tot+=ACTS[n].w});var r=Math.random()*tot,pick=names[0];
+    for(var i=0;i<names.length;i++){r-=ACTS[names[i]].w;if(r<=0){pick=names[i];break}}
+    for(var tries=0;tries<12;tries++){var g=ACTS[pick].run();if(safe(g)){show.last=pick;show.groups=g;return}}
+    show.last='deltaPass';show.groups=[grp({shape:'delta',path:route(),v:V()})]}
+  /* ---- per-jet motion ---- */
+  function spreadOf(g,u){var f=g.f;if(u<=f[0][0])return f[0][1];for(var i=1;i<f.length;i++)if(u<=f[i][0]){var a=f[i-1],b=f[i];return a[1]+(b[1]-a[1])*sstep((u-a[0])/((b[0]-a[0])||1))}return f[f.length-1][1]}
+  function jetAt(g,i){var u=g.d/g.path.len,q=at(g.path,g.d),k=(W<600?1:1.4)*spreadOf(g,u),A=SH[g.shape][i],B=SH[g.s2][i]||A,t=sstep((u-g.m+.12)/.24),ox=(A[0]+(B[0]-A[0])*t)*k,oy=(A[1]+(B[1]-A[1])*t)*k,c=Math.cos(q.h),sn=Math.sin(q.h),bank=1;
+    if(g.roll){var r=(u-g.roll[0])/(g.roll[1]-g.roll[0]);if(r>0&&r<1)bank=Math.cos(2*Math.PI*sstep(r))}
+    if(g.knife&&g.X){var dd=Math.hypot(q.x-g.X[0],q.y-g.X[1]);bank=1-.85*Math.max(0,1-dd/160)}
+    return{x:q.x+ox*c-oy*sn,y:q.y+ox*sn+oy*c,h:q.h,b:bank}}
+  function trailDraw(tr,smoke,dk){var n=tr.length;for(var j=1;j<n;j++){ctx.strokeStyle='rgba('+smoke+','+((dk?.5:.42)*(j/n)).toFixed(3)+')';ctx.beginPath();ctx.moveTo(tr[j-1][0],tr[j-1][1]);ctx.lineTo(tr[j][0],tr[j][1]);ctx.stroke()}}
+  function draw(){ctx.clearRect(0,0,W,H);var dk=dark(),k=W<600?1:1.4,smoke=dk?'236,240,232':'120,132,124';ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=3*k;
+    ghosts.forEach(function(tr){trailDraw(tr,smoke,dk)});
+    show.groups.forEach(function(g){g.trails.forEach(function(tr){trailDraw(tr,smoke,dk)})});
+    show.groups.forEach(function(g){if(g.done||g.delay>0)return;for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i);ctx.save();ctx.translate(J.x,J.y);ctx.rotate(J.h);ctx.scale(k,k*Math.max(.12,Math.abs(J.b)));
+      ctx.globalAlpha=.92;ctx.fillStyle=dk?'#4a72c9':'#1d3a78';ctx.fill(jet);ctx.strokeStyle='#e8b10e';ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(-11,0);ctx.moveTo(-3.2,-8.2);ctx.lineTo(2.6,-2.4);ctx.moveTo(-3.2,8.2);ctx.lineTo(2.6,2.4);ctx.stroke();ctx.restore()}})}
+  function tick(dt){var MAX=90;
+    for(var gi=ghosts.length-1;gi>=0;gi--){ghosts[gi].splice(0,Math.max(1,Math.round(dt*70)));if(!ghosts[gi].length)ghosts.splice(gi,1)}
+    if(!show.groups.length){show.wait-=dt;if(show.wait<=0)nextAct();return}
+    var alive=0;show.groups.forEach(function(g){if(g.done)return;if(g.delay>0){g.delay-=dt;alive++;return}g.d+=g.v*dt;
+      for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i),tr=g.trails[i],lp=tr[tr.length-1];if(!lp||Math.hypot(J.x-lp[0],J.y-lp[1])>7){tr.push([J.x,J.y]);if(tr.length>MAX)tr.shift()}}
+      var out=g.d>g.path.len*.4&&!g.trails.some(function(t,i){var J=jetAt(g,i);return inView([J.x,J.y],60)});
+      if(g.d>=g.path.len||out)g.done=true;else alive++});
+    if(!alive){show.groups.forEach(function(g){g.trails.forEach(function(t){ghosts.push(t)})});show.groups=[];if(--show.left>0)show.wait=rnd(2,4);else{show.left=1+Math.floor(Math.random()*3);show.wait=rnd(15,45)}}}
+  function step(ts){if(!running)return;var dt=Math.min((ts-(last||ts))/1000,.1);last=ts;tick(dt);draw();raf=requestAnimationFrame(step)}
   function go(on){if(still)on=false;if(on===running)return;running=on;last=0;if(on)raf=requestAnimationFrame(step);else cancelAnimationFrame(raf)}
-  readCols();size();
+  size();
   var vis=true;
   if('IntersectionObserver' in window)new IntersectionObserver(function(e){vis=e[0].isIntersecting;go(vis&&!document.hidden)}).observe(wrap);
   document.addEventListener('visibilitychange',function(){go(vis&&!document.hidden)});
   if('ResizeObserver' in window)new ResizeObserver(size).observe(wrap);else window.addEventListener('resize',size);
-  if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){readCols();draw()});
-  new MutationObserver(function(){readCols();draw()}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+  new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
   go(!document.hidden);
 })();
 </script>
