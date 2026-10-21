@@ -11,7 +11,7 @@ are dropped entirely; registrations and owner/operator fields are never stored.
 
 Output: snapshot.json (compact). Usage: python3 snapshot.py <standing-data dir> <out file>
 """
-import csv, json, math, sys, time, urllib.request
+import csv, json, math, sys, time, urllib.error, urllib.request
 from pathlib import Path
 
 UA = {"User-Agent": "SkyWatch snapshot for babusovereign.com (contact via github.com/babusovereign)"}
@@ -33,14 +33,25 @@ REGIONS = [
 ]
 
 
-def get(url, tries=3):
+def get(url, tries=4):
+    """Fetch JSON. On HTTP 429, wait as long as the server asks (Retry-After), else back off 15/30/60 s."""
     for i in range(tries):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
                 return json.load(r)
+        except urllib.error.HTTPError as ex:
+            wait = 15 * 2 ** i
+            if ex.code == 429:
+                try:
+                    wait = max(wait, min(120, int(ex.headers.get("Retry-After") or 0)))
+                except ValueError:
+                    pass
+            print(f"  {url} failed (HTTP {ex.code}); retry {i + 1} in {wait}s", flush=True)
         except Exception as ex:  # noqa: BLE001
-            print(f"  {url} failed ({ex}); retry {i + 1}", flush=True)
-            time.sleep(5 * (i + 1))
+            wait = 10 * (i + 1)
+            print(f"  {url} failed ({ex}); retry {i + 1} in {wait}s", flush=True)
+        if i < tries - 1:
+            time.sleep(wait)
     return None
 
 
@@ -95,11 +106,12 @@ def main():
     routes, apts = load_routes(sd), load_airports(sd)
     print(f"{len(routes):,} routes, {len(apts):,} airports loaded", flush=True)
 
-    seen, now = {}, int(time.time())
+    seen, now, missed = {}, int(time.time()), []
     for lat, lon in REGIONS:
         d = get(f"https://api.adsb.lol/v2/point/{lat}/{lon}/{RADIUS}")
-        time.sleep(1.5)                       # be gentle with a free community API
+        time.sleep(3)                         # be gentle with a free community API
         if not d:
+            missed.append(f"{lat},{lon}")
             continue
         now = int((d.get("now") or now * 1000) / 1000)
         for a in d.get("ac") or []:
@@ -109,6 +121,8 @@ def main():
                 continue
             seen[a["hex"]] = a
     print(f"{len(seen):,} aircraft after de-dup and privacy filter", flush=True)
+    print(f"regions fetched: {len(REGIONS) - len(missed)}/{len(REGIONS)}"
+          + (f"; skipped after retries: {' '.join(missed)}" if missed else ""), flush=True)
 
     route_ix, route_list, used_apts, flights = {}, [], {}, []
     for a in seen.values():
