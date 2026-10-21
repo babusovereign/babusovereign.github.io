@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SkyWatch demo · Babu Sovereign Perumalla</title>
-<meta name="description" content="A recorded demo of SkyWatch, a world flight radar with a Claude flight analyst, built at Claude Code Build Night.">
+<title>SkyWatch · Babu Sovereign Perumalla</title>
+<meta name="description" content="SkyWatch: a world flight radar with an AI flight assistant, refreshed every 30 minutes from open flight data. Built at Claude Code Build Night.">
 <link rel="canonical" href="https://babusovereign.com/builds/skywatch/">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,28 +109,29 @@
     .panel { top:auto; left:8px; right:8px; bottom:8px; width:auto; height:48vh; }
     .hud { top:8px; left:8px; padding:10px 14px; } .legend { display:none; }
   }
+  .fineprint { font-size:11px; line-height:1.5; color:var(--muted); margin:6px 0 0; }
+  .fineprint a { color:var(--muted); }
+  .ans.brief { margin-top:4px; }
 </style>
 </head>
 <body>
 <div id="map"></div>
 
 <div class="hud">
-  <div class="brand"><div class="live rec" id="dot"></div><span>SKYWATCH</span><em class="tag" id="modetag">DEMO</em></div>
-  <div class="hudmeta" id="hudmeta">loading recorded snapshot…</div>
-  <div class="modebar"><button class="golive" id="golive" type="button">● Go live · 5 min</button><span class="livenote" id="livenote">3 live sessions a day</span></div>
+  <div class="brand"><div class="live rec" id="dot"></div><span>SKYWATCH</span><em class="tag" id="modetag">SNAPSHOT</em></div>
+  <div class="hudmeta" id="hudmeta">loading flights…</div>
   <div class="legend">0 ft <i></i> 40k ft · scroll out for the world</div>
-  <div class="hudlinks"><a href="/builds/">← Builds</a><a href="https://github.com/babusovereign/skywatch" target="_blank" rel="noopener">Source ↗</a><a href="https://www.youtube.com/watch?v=rLcXh3crHt8" target="_blank" rel="noopener">Live demo video ↗</a></div>
+  <div class="hudlinks"><a href="/builds/">← Builds</a><a href="https://github.com/babusovereign/skywatch" target="_blank" rel="noopener">Source ↗</a><a href="https://www.youtube.com/watch?v=rLcXh3crHt8" target="_blank" rel="noopener">Video ↗</a></div>
 </div>
 
 <aside class="panel">
   <div class="scroll" id="scroll">
     <div id="sel"></div>
     <div id="feed"></div>
-    <div class="note" id="intro"><b>Demo mode</b> shows one real worldwide snapshot, with planes moving on from their speed and heading. Press <b>Go live</b> for 5 minutes of real-time traffic around the map's center (3 times a day). Planes ringed in <b style="color:#fbbf24">gold</b> have briefings recorded with Claude; any other plane gets a quick AI summary of public route data.</div>
-    <p class="label">Recorded briefings</p>
-    <div class="picks" id="picks"></div>
-    <p class="label">Airspace in the snapshot</p>
+    <div class="note" id="intro">Real flights over the world's busiest airspace, <b>refreshed every 30 minutes</b> from open flight data; between refreshes, planes glide on from their speed and heading. Tap any plane for an instant briefing, or ask about flights, airports and weather below.</div>
+    <p class="label">Airspace in view</p>
     <div class="stats" id="stats"></div>
+    <p class="fineprint">Flight data © <a href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a> contributors (<a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>) · routes &amp; airports: <a href="https://github.com/vradarserver/standing-data" target="_blank" rel="noopener">Virtual Radar Server</a> (CC0) · weather: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> · chat: Built with Llama · aircraft that opted out of tracking are hidden.</p>
   </div>
   <div class="ask">
     <div class="chips">
@@ -150,380 +151,270 @@
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
+const SNAPSHOT = "https://raw.githubusercontent.com/babusovereign/babusovereign.github.io/skywatch-data/snapshot.json";
+const API = "https://skywatch-api.babusovereign.workers.dev";
+const SITEKEY = "0x4AAAAAAFfsHx-sd93jUbEk";
+// ICAO airline designators → names (common carriers; anything else shows as "operator code XXX").
+const AIRLINES = {
+  AAL:"American Airlines",ACA:"Air Canada",AFR:"Air France",AIC:"Air India",AMX:"Aeroméxico",ANA:"All Nippon Airways",ANZ:"Air New Zealand",
+  ASA:"Alaska Airlines",AUA:"Austrian Airlines",AVA:"Avianca",ITY:"ITA Airways",BAW:"British Airways",BEL:"Brussels Airlines",
+  CAL:"China Airlines",CCA:"Air China",CES:"China Eastern",CSN:"China Southern",CPA:"Cathay Pacific",CMP:"Copa Airlines",DAL:"Delta Air Lines",
+  DLH:"Lufthansa",EDV:"Endeavor Air (Delta Connection)",EIN:"Aer Lingus",EJA:"NetJets",ELY:"El Al",ENY:"Envoy Air (American Eagle)",ETD:"Etihad Airways",
+  ETH:"Ethiopian Airlines",EVA:"EVA Air",EZY:"easyJet",EJU:"easyJet Europe",FDX:"FedEx",FFT:"Frontier Airlines",FIN:"Finnair",GTI:"Atlas Air",
+  HAL:"Hawaiian Airlines",IBE:"Iberia",ICE:"Icelandair",JAL:"Japan Airlines",JBU:"JetBlue",JIA:"PSA Airlines (American Eagle)",JZA:"Jazz (Air Canada Express)",
+  KAL:"Korean Air",KLM:"KLM",LAN:"LATAM",TAM:"LATAM Brasil",LOT:"LOT Polish Airlines",MXY:"Breeze Airways",NKS:"Spirit Airlines",NAX:"Norwegian",
+  QFA:"Qantas",QTR:"Qatar Airways",QXE:"Horizon Air (Alaska)",RPA:"Republic Airways",RYR:"Ryanair",SAS:"SAS",SCX:"Sun Country Airlines",
+  SIA:"Singapore Airlines",SKW:"SkyWest Airlines",SWA:"Southwest Airlines",SWR:"Swiss",TAP:"TAP Air Portugal",THY:"Turkish Airlines",
+  TSC:"Air Transat",UAE:"Emirates",UAL:"United Airlines",UPS:"UPS Airlines",VIR:"Virgin Atlantic",VOZ:"Virgin Australia",
+  WJA:"WestJet",WZZ:"Wizz Air",AAY:"Allegiant Air",ASH:"Mesa Airlines",GJS:"GoJet Airlines",CXA:"Xiamen Airlines",CHH:"Hainan Airlines",
+  SVA:"Saudia",MSR:"EgyptAir",RAM:"Royal Air Maroc",KQA:"Kenya Airways",SAA:"South African Airways",PAL:"Philippine Airlines",
+  GIA:"Garuda Indonesia",MAS:"Malaysia Airlines",THA:"Thai Airways",VJC:"VietJet Air",HVN:"Vietnam Airlines",AXM:"AirAsia",
+  IGO:"IndiGo",JST:"Jetstar",FJI:"Fiji Airways",ABX:"ABX Air",CLX:"Cargolux",CKS:"Kalitta Air",PAC:"Polar Air Cargo",BOX:"AeroLogic",
+  SXS:"SunExpress",VLG:"Vueling",TOM:"TUI Airways",EXS:"Jet2",AEE:"Aegean Airlines",TRA:"Transavia",
+  PGT:"Pegasus Airlines",UZB:"Uzbekistan Airways",KZR:"Air Astana",OMA:"Oman Air",GFA:"Gulf Air",KAC:"Kuwait Airways",
+  RJA:"Royal Jordanian",MEA:"Middle East Airlines",AZU:"Azul",GLO:"Gol",ARG:"Aerolíneas Argentinas",VOI:"Volaris",VIV:"Viva Aerobus",
+  LXJ:"Flexjet",FLE:"Flair Airlines",POE:"Porter Airlines",CJT:"Cargojet",
+};
+// ICAO aircraft type designators → names (common types).
+const TYPES = {
+  A19N:"Airbus A319neo",A20N:"Airbus A320neo",A21N:"Airbus A321neo",A319:"Airbus A319",A320:"Airbus A320",A321:"Airbus A321",
+  A332:"Airbus A330-200",A333:"Airbus A330-300",A339:"Airbus A330-900neo",A359:"Airbus A350-900",A35K:"Airbus A350-1000",A388:"Airbus A380-800",
+  BCS1:"Airbus A220-100",BCS3:"Airbus A220-300",B712:"Boeing 717-200",B737:"Boeing 737-700",B738:"Boeing 737-800",B739:"Boeing 737-900",
+  B37M:"Boeing 737 MAX 7",B38M:"Boeing 737 MAX 8",B39M:"Boeing 737 MAX 9",B744:"Boeing 747-400",B748:"Boeing 747-8",B752:"Boeing 757-200",
+  B753:"Boeing 757-300",B763:"Boeing 767-300",B764:"Boeing 767-400",B772:"Boeing 777-200",B77L:"Boeing 777-200LR",B77W:"Boeing 777-300ER",
+  B788:"Boeing 787-8",B789:"Boeing 787-9",B78X:"Boeing 787-10",E170:"Embraer 170",E75L:"Embraer 175",E75S:"Embraer 175",E190:"Embraer 190",
+  E195:"Embraer 195",E290:"Embraer E190-E2",E295:"Embraer E195-E2",CRJ2:"Bombardier CRJ200",CRJ7:"Bombardier CRJ700",CRJ9:"Bombardier CRJ900",
+  DH8D:"De Havilland Dash 8-400",AT72:"ATR 72",AT76:"ATR 72-600",MD11:"McDonnell Douglas MD-11",C172:"Cessna 172",C208:"Cessna 208 Caravan",
+  PC12:"Pilatus PC-12",GLF6:"Gulfstream G650",GLEX:"Bombardier Global Express",CL35:"Bombardier Challenger 350",E55P:"Embraer Phenom 300",
+  SR22:"Cirrus SR22",EC35:"Airbus H135",A139:"Leonardo AW139",
+};
+const airlineOf = cs => { const m = /^([A-Z]{3})\d/.exec(cs || ""); return m ? (AIRLINES[m[1]] || null) : null; };
+const typeName = t => (t && TYPES[t]) || null;
+
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ft = m => m == null ? null : Math.round(m * 3.281);
-const kt = ms => ms == null ? null : Math.round(ms * 1.944);
-const fpm = v => v == null ? null : Math.round(v * 196.85);
-const hue = altFt => 160 + Math.min(Math.max((altFt ?? 0) / 40000, 0), 1) * 140;
+const num = n => n == null ? "—" : Number(n).toLocaleString("en-US");
 
-const map = L.map("map", { zoomControl:false, attributionControl:true, minZoom:2, worldCopyJump:true }).setView([37.62, -122.25], 9);
+// ---------- map ----------
+const map = L.map("map", { zoomControl:false, attributionControl:true, minZoom:2, worldCopyJump:true }).setView([37.62, -122.25], 8);
 L.control.zoom({ position:"bottomleft" }).addTo(map);
 L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
-  attribution:'Tiles &copy; Esri · ADS-B: <a href="https://opensky-network.org" target="_blank" rel="noopener">The OpenSky Network</a>', maxZoom:16
-}).addTo(map);
-L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
-  maxZoom:16, opacity:.8
-}).addTo(map);
+  attribution:'Tiles &copy; Esri · Flights &copy; <a href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a> (ODbL)', maxZoom:16 }).addTo(map);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", { maxZoom:16, opacity:.8 }).addTo(map);
 
-// ---------- canvas plane layer (handles 10k+ aircraft) ----------
 const canvas = document.createElement("canvas");
 canvas.style.cssText = "position:absolute;inset:0;z-index:450;pointer-events:none";
 map.getContainer().appendChild(canvas);
 const ctx = canvas.getContext("2d");
-function resize() {
-  const dpr = window.devicePixelRatio || 1, s = map.getSize();
-  canvas.width = s.x * dpr; canvas.height = s.y * dpr;
-  canvas.style.width = s.x + "px"; canvas.style.height = s.y + "px";
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
+function resize() { const dpr = window.devicePixelRatio || 1, s = map.getSize();
+  canvas.width = s.x * dpr; canvas.height = s.y * dpr; canvas.style.width = s.x + "px"; canvas.style.height = s.y + "px"; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
 map.on("resize", resize); resize();
 
 const PLANE = new Path2D("M12 2c.8 0 1.3.9 1.3 2v5.2l7.7 4.6v2l-7.7-2.4v4.8l2.2 1.7V21L12 20l-3.5 1v-1.1l2.2-1.7v-4.8L3 15.8v-2l7.7-4.6V4c0-1.1.5-2 1.3-2z");
-const BUCKETS = 14, GROUND = "#64748b", EASE_MS = 2500;
+const BUCKETS = 14, GROUND = "#64748b", EASE_MS = 2500, KT_MS = 0.514444;
 const bucketColor = i => `hsl(${160 + i / (BUCKETS - 1) * 140} 90% 65%)`;
-const bucketOf = f => f.ground ? -1 : Math.round(Math.min(Math.max((ft(f.alt) ?? 0) / 40000, 0), 1) * (BUCKETS - 1));
+const bucketOf = f => f.ground ? -1 : Math.round(Math.min(Math.max((f.altFt ?? 0) / 40000, 0), 1) * (BUCKETS - 1));
+let SNAP = null, ALL = [], flights = [], planes = new Map(), selected = null, drawn = [], hoverId = null;
 
-let flights = [], planes = new Map(), selected = null, busy = 0, drawn = [], hoverId = null;
-
-function posOf(p, now) {
-  const dt = Math.min((now - p.t0) / 1000, 1800), dist = p.spd * dt, rad = p.hdg * Math.PI / 180;
-  const lat = p.lat + dist * Math.cos(rad) / 111320;
-  const lon = p.lon + dist * Math.sin(rad) / (111320 * Math.cos(p.lat * Math.PI / 180));
+function posOf(p, now) {   // dead-reckon from speed/heading, capped at 40 min so planes don't fly off forever
+  const dt = Math.min((now - p.t0) / 1000, 2400), dist = p.spd * dt, rad = p.hdg * Math.PI / 180;
+  const lat = p.lat + dist * Math.cos(rad) / 111320, lon = p.lon + dist * Math.sin(rad) / (111320 * Math.cos(p.lat * Math.PI / 180));
   const k = Math.max(0, 1 - (now - p.offT) / EASE_MS), e = k * k;
   return [lat + p.offLat * e, lon + p.offLon * e];
 }
-
 function animate(now) {
   const s = map.getSize(); ctx.clearRect(0, 0, s.x, s.y);
   const z = map.getZoom(), glyph = z >= 6, scale = Math.min(1.1, 0.45 + z * 0.07);
-  const groups = Array.from({ length:BUCKETS + 1 }, () => []);
-  drawn = [];
+  const groups = Array.from({ length:BUCKETS + 1 }, () => []); drawn = [];
   for (const p of planes.values()) {
     const [la, lo] = posOf(p, now), pt = map.latLngToContainerPoint([la, lo]);
     if (pt.x < -20 || pt.y < -20 || pt.x > s.x + 20 || pt.y > s.y + 20) continue;
-    drawn.push({ x:pt.x, y:pt.y, p, la, lo });
-    groups[p.b + 1].push(pt.x, pt.y, p.hdg);
+    drawn.push({ x:pt.x, y:pt.y, p, la, lo }); groups[p.b + 1].push(pt.x, pt.y, p.hdg);
   }
   for (let g = 0; g < groups.length; g++) {
     const a = groups[g]; if (!a.length) continue;
     ctx.fillStyle = g === 0 ? GROUND : bucketColor(g - 1);
-    if (!glyph) {
-      const r = z <= 3 ? 1.2 : 1.6;
-      ctx.beginPath();
-      for (let i = 0; i < a.length; i += 3) { ctx.moveTo(a[i] + r, a[i + 1]); ctx.arc(a[i], a[i + 1], r, 0, 6.2832); }
-      ctx.fill();
-    } else {
-      for (let i = 0; i < a.length; i += 3) {
-        ctx.save(); ctx.translate(a[i], a[i + 1]); ctx.rotate(a[i + 2] * Math.PI / 180);
-        ctx.scale(scale, scale); ctx.translate(-12, -12); ctx.fill(PLANE); ctx.restore();
-      }
-    }
+    if (!glyph) { const r = z <= 3 ? 1.2 : 1.6; ctx.beginPath();
+      for (let i = 0; i < a.length; i += 3) { ctx.moveTo(a[i] + r, a[i + 1]); ctx.arc(a[i], a[i + 1], r, 0, 6.2832); } ctx.fill(); }
+    else for (let i = 0; i < a.length; i += 3) { ctx.save(); ctx.translate(a[i], a[i + 1]); ctx.rotate(a[i + 2] * Math.PI / 180);
+      ctx.scale(scale, scale); ctx.translate(-12, -12); ctx.fill(PLANE); ctx.restore(); }
   }
   for (const d of drawn) {
-    if (MODE !== "demo" || !BRIEF[d.p.f.id]) continue;
-    ctx.beginPath(); ctx.arc(d.x, d.y, glyph ? 13 * scale : 5, 0, 6.2832);
-    ctx.strokeStyle = "rgba(251,191,36,.9)"; ctx.lineWidth = 1.5; ctx.stroke();
-  }
-  for (const d of drawn) {
-    const isSel = selected && d.p.f.id === selected.id;
-    if (!isSel && d.p.f.id !== hoverId) continue;
+    const isSel = selected && d.p.f.id === selected.id; if (!isSel && d.p.f.id !== hoverId) continue;
     ctx.beginPath(); ctx.arc(d.x, d.y, glyph ? 16 * scale : 7, 0, 6.2832);
     ctx.strokeStyle = isSel ? "#fff" : "rgba(255,255,255,.5)"; ctx.lineWidth = isSel ? 2 : 1.2; ctx.stroke();
   }
   requestAnimationFrame(animate);
 }
 requestAnimationFrame(animate);
-
-function nearest(pt) {
-  let best = null, bd = 144;
-  for (const d of drawn) { const dx = d.x - pt.x, dy = d.y - pt.y, dd = dx * dx + dy * dy; if (dd < bd) { bd = dd; best = d; } }
-  return best;
-}
+function nearest(pt) { let best = null, bd = 144;
+  for (const d of drawn) { const dx = d.x - pt.x, dy = d.y - pt.y, dd = dx * dx + dy * dy; if (dd < bd) { bd = dd; best = d; } } return best; }
 const tip = L.tooltip({ direction:"top", offset:[0, -10] });
-map.on("mousemove", e => {
-  const d = nearest(e.containerPoint), id = d ? d.p.f.id : null;
+map.on("mousemove", e => { const d = nearest(e.containerPoint), id = d ? d.p.f.id : null;
   map.getContainer().style.cursor = d ? "pointer" : "";
-  if (d) { tip.setLatLng([d.la, d.lo]).setContent(`${esc(d.p.f.cs)} · ${ft(d.p.f.alt)?.toLocaleString() ?? "—"} ft`); if (id !== hoverId) tip.openOn(map); }
+  if (d) { tip.setLatLng([d.la, d.lo]).setContent(`${esc(d.p.f.cs)} · ${d.p.f.ground ? "ground" : num(d.p.f.altFt) + " ft"}`); if (id !== hoverId) tip.openOn(map); }
   else if (hoverId) map.closeTooltip(tip);
-  hoverId = id;
-});
+  hoverId = id; });
 map.on("mouseout", () => { hoverId = null; map.closeTooltip(tip); });
 map.on("click", e => { const d = nearest(e.containerPoint); if (d) select(d.p.f.id, false); });
 
-// ---------- data ----------
-function bbox() {
-  const b = map.getBounds().pad(0.15);
-  return { lamin:Math.max(-90, b.getSouth()), lomin:Math.max(-180, b.getWest()),
-           lamax:Math.min(90, b.getNorth()), lomax:Math.min(180, b.getEast()) };
+// ---------- data: auto-refreshed snapshot ----------
+function decode(s) {
+  return s.flights.map(a => {
+    const route = a[10] >= 0 ? s.routes[a[10]] : null;
+    return { id:a[0], cs:a[1], lat:a[2], lon:a[3], altFt:a[4], ground:!!a[5], kt:a[6], hdg:a[7] || 0, fpm:a[8], type:a[9],
+             route, routeOk:!!a[11], mil:!!a[12], airline:airlineOf(a[1]) };
+  });
 }
-const visibleFlights = () => { const b = map.getBounds(); return flights.filter(f => b.contains([f.lat, f.lon])); };
-
-let DATA = null, ALL = [], BRIEF = {}, ANSWERS = {};
-const T0 = performance.now();
-
+function ageText() { if (!SNAP) return ""; const m = Math.max(0, Math.round((Date.now() / 1000 - SNAP.t) / 60)); return m < 1 ? "just now" : `${m} min ago`; }
 async function load() {
-  const r = await fetch("data.json");
-  DATA = await r.json();
-  BRIEF = DATA.briefings; ANSWERS = DATA.answers;
-  ALL = DATA.flights.map(a => ({ id:a[0], cs:a[1], country:DATA.countries[a[2]], lat:a[3], lon:a[4], alt:a[5],
-                                 ground:!!a[6], spd:a[7], hdg:a[8], vr:a[9] }));
-  loadDemoPlanes();
-  $("#picks").innerHTML = ALL.filter(f => BRIEF[f.id])
-    .sort((a, b) => inBay(b) - inBay(a))
-    .map(f => `<span class="pick" data-id="${esc(f.id)}">${esc(f.cs)}</span>`).join("");
-  document.querySelectorAll(".pick").forEach(p => p.onclick = () => select(p.dataset.id, true));
+  const r = await fetch(SNAPSHOT + "?t=" + Math.floor(Date.now() / 300000), { cache:"no-cache" });
+  if (!r.ok) throw new Error("snapshot unavailable (" + r.status + ")");
+  const s = await r.json();
+  if (SNAP && s.t === SNAP.t) return;
+  const first = !SNAP; SNAP = s; ALL = decode(s);
+  const now = performance.now(), t0 = now - Math.max(0, Date.now() / 1000 - s.t) * 1000, seen = new Set();
+  for (const f of ALL) {
+    seen.add(f.id);
+    const q = { lat:f.lat, lon:f.lon, spd:f.ground ? 0 : (f.kt || 0) * KT_MS, hdg:f.hdg, t0, offLat:0, offLon:0, offT:now };
+    const p = planes.get(f.id);
+    if (p && !first) { const [la, lo] = posOf(p, now), [nla, nlo] = posOf(q, now); let oLat = la - nla, oLon = lo - nlo;
+      if (Math.abs(oLat) > 1 || Math.abs(oLon) > 1) { oLat = 0; oLon = 0; } Object.assign(p, q, { offLat:oLat, offLon:oLon, f, b:bucketOf(f) }); }
+    else planes.set(f.id, { ...q, f, b:bucketOf(f) });
+  }
+  for (const id of planes.keys()) if (!seen.has(id)) planes.delete(id);
+  if (selected) { const n = ALL.find(f => f.id === selected.id); selected = n || null; renderSel(false); }
   refresh();
 }
-let DEMO_ALL = null;
-function loadDemoPlanes() {
-  if (!DEMO_ALL) DEMO_ALL = ALL; ALL = DEMO_ALL;
-  const now = performance.now();
-  for (const f of ALL) planes.set(f.id, { lat:f.lat, lon:f.lon, spd:f.ground ? 0 : (f.spd || 0), hdg:f.hdg || 0, t0:T0, offLat:0, offLon:0, offT:now, f, b:bucketOf(f) });
-}
-const inBay = f => { const b = DATA.bbox; return f.lat >= b.lamin && f.lat <= b.lamax && f.lon >= b.lomin && f.lon <= b.lomax ? 1 : 0; };
-
+const bbox = () => { const b = map.getBounds(); return { s:b.getSouth(), w:b.getWest(), n:b.getNorth(), e:b.getEast() }; };
+const visibleFlights = () => { const b = map.getBounds(); return ALL.filter(f => b.contains([f.lat, f.lon])); };
 function refresh() {
-  if (!DATA) return;
-  if (MODE === "live") { fetchLive(); return; }
-  const b = bbox();
-  flights = ALL.filter(f => f.lat >= b.lamin && f.lat <= b.lamax && f.lon >= b.lomin && f.lon <= b.lomax);
-  const when = new Date(DATA.t * 1000).toLocaleString([], { month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZoneName:"short" });
-  $("#hudmeta").textContent = `${visibleFlights().length.toLocaleString()} in view · ${ALL.length.toLocaleString()} worldwide · snapshot ${when}`;
+  if (!SNAP) return;
+  flights = visibleFlights();
+  $("#hudmeta").textContent = `${num(flights.length)} in view · ${num(ALL.length)} tracked · updated ${ageText()}`;
   renderStats();
 }
+let mt; map.on("moveend", () => { clearTimeout(mt); mt = setTimeout(refresh, 250); });
+setInterval(() => { if (SNAP) $("#hudmeta").textContent = `${num(visibleFlights().length)} in view · ${num(ALL.length)} tracked · updated ${ageText()}`; }, 30000);
+setInterval(() => load().catch(() => {}), 5 * 60000);
 
 function renderStats() {
-  const vis = visibleFlights(), air = vis.filter(f => !f.ground);
-  const hi = air.reduce((a, f) => (f.alt ?? 0) > (a?.alt ?? -1) ? f : a, null);
-  const fast = air.reduce((a, f) => (f.spd ?? 0) > (a?.spd ?? -1) ? f : a, null);
-  const countries = MODE === "live" ? new Set(vis.map(f => f.type).filter(Boolean)).size : new Set(vis.map(f => f.country)).size;
+  const vis = flights, air = vis.filter(f => !f.ground);
+  const hi = air.reduce((a, f) => (f.altFt ?? 0) > (a?.altFt ?? -1) ? f : a, null);
+  const fast = air.reduce((a, f) => (f.kt ?? 0) > (a?.kt ?? -1) ? f : a, null);
+  const routed = vis.filter(f => f.route).length;
   $("#stats").innerHTML = `
-    <div class="stat"><b>${air.length.toLocaleString()}</b><small>airborne · ${(vis.length - air.length).toLocaleString()} on ground</small></div>
-    <div class="stat"><b>${countries}</b><small>${MODE === "live" ? "aircraft types" : "countries of registry"}</small></div>
-    <div class="stat click" data-id="${hi?.id ?? ""}"><b>${hi ? ft(hi.alt).toLocaleString() + " ft" : "—"}</b><small>highest · ${esc(hi?.cs ?? "")}</small></div>
-    <div class="stat click" data-id="${fast?.id ?? ""}"><b>${fast ? kt(fast.spd) + " kt" : "—"}</b><small>fastest · ${esc(fast?.cs ?? "")}</small></div>`;
+    <div class="stat"><b>${num(air.length)}</b><small>airborne · ${num(vis.length - air.length)} on ground</small></div>
+    <div class="stat"><b>${num(routed)}</b><small>with a known route</small></div>
+    <div class="stat click" data-id="${hi?.id ?? ""}"><b>${hi ? num(hi.altFt) + " ft" : "—"}</b><small>highest · ${esc(hi?.cs ?? "")}</small></div>
+    <div class="stat click" data-id="${fast?.id ?? ""}"><b>${fast ? num(fast.kt) + " kt" : "—"}</b><small>fastest · ${esc(fast?.cs ?? "")}</small></div>`;
   document.querySelectorAll(".stat.click").forEach(s => s.onclick = () => s.dataset.id && select(s.dataset.id, true));
 }
 
+// ---------- selection + instant briefing (built in the page from public data; no AI) ----------
 function select(id, fly) {
-  const f = ALL.find(x => x.id === id); if (!f) return;
-  selected = f;
+  const f = ALL.find(x => x.id === id); if (!f) return; selected = f;
   if (fly) { const p = planes.get(id), [la, lo] = p ? posOf(p, performance.now()) : [f.lat, f.lon]; map.flyTo([la, lo], Math.max(map.getZoom(), 8), { duration:.8 }); }
   renderSel(true);
 }
-
+const apt = c => { const a = SNAP.airports[c]; return a ? `${a[1] || c} (${a[0]}${a[2] ? ", " + a[2] : ""})` : c; };
+function briefing(f) {
+  const code = (/^([A-Z]{3})\d/.exec(f.cs) || [])[1];
+  const airline = f.airline || (code ? `Operator code ${code}` : f.mil ? "Military" : "Not an airline flight (private or other)");
+  const route = f.route ? f.route.split("-").map(apt).join(" → ") + (f.routeOk ? "" : " (published route; may not match today's flight)") : "Not in the public route database";
+  const phase = f.ground ? "On the ground" : (f.fpm ?? 0) > 300 ? "Climbing" : (f.fpm ?? 0) < -300 ? "Descending" : "Level";
+  const status = `${phase}${f.ground ? "" : ` at ${num(f.altFt)} ft`}${f.kt ? `, ${num(f.kt)} kt` : ""}, heading ${Math.round(f.hdg)}°${f.fpm && Math.abs(f.fpm) > 300 ? `, ${f.fpm > 0 ? "+" : ""}${num(f.fpm)} ft/min` : ""}`;
+  const aircraft = typeName(f.type) ? `${typeName(f.type)} (${f.type})` : f.type || "Not reported";
+  return `**Airline:** ${airline}\n**Route:** ${route}\n**Aircraft:** ${aircraft}\n**Status:** ${status}`;
+}
 function renderSel(scroll) {
-  const f = selected;
-  if (!f) { $("#sel").innerHTML = ""; return; }
-  const v = fpm(f.vr), arrow = v > 300 ? "↗ climbing" : v < -300 ? "↘ descending" : "→ level";
+  const f = selected; if (!f) { $("#sel").innerHTML = ""; return; }
+  const arrow = f.ground ? "on ground" : (f.fpm ?? 0) > 300 ? "↗ climbing" : (f.fpm ?? 0) < -300 ? "↘ descending" : "→ level";
   $("#sel").innerHTML = `<div class="flight">
     <h2>${esc(f.cs)} <span class="x" id="close">×</span></h2>
-    <div class="sub">${esc(f.country)} · ICAO ${esc(f.id)} · ${f.ground ? "on ground" : arrow}</div>
-    <div class="grid">
-      <div>ALT<b>${ft(f.alt)?.toLocaleString() ?? "—"} ft</b></div>
-      <div>SPEED<b>${kt(f.spd) ?? "—"} kt</b></div>
-      <div>HDG<b>${Math.round(f.hdg || 0)}°</b></div>
-    </div>
-    <button class="btn" id="brief">${MODE === "demo" && BRIEF[f.id] ? "✦ Play the recorded Claude briefing" : "✦ Brief me on this flight"}</button>
-    <a class="ext" href="https://globe.adsbexchange.com/?icao=${encodeURIComponent(f.id)}" target="_blank" rel="noopener">Open in ADS-B Exchange ↗</a>
+    <div class="sub">${esc(f.airline || (f.mil ? "Military" : "—"))} · ${esc(typeName(f.type) || f.type || "type n/a")} · ${arrow}</div>
+    <div class="grid"><div>ALT<b>${f.ground ? "ground" : num(f.altFt) + " ft"}</b></div><div>SPEED<b>${num(f.kt)} kt</b></div><div>HDG<b>${Math.round(f.hdg)}°</b></div></div>
+    <div class="ans brief">${md(briefing(f))}<div class="t">Built from public data · as of ${ageText()}</div></div>
   </div>`;
   $("#close").onclick = () => { selected = null; renderSel(); };
-  $("#brief").onclick = () => ask({ flight:f }, `Brief me on ${f.cs}`);
   if (scroll) $("#scroll").scrollTop = 0;
 }
 
 function md(s) {
-  const inline = t => esc(t)
-    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>')
-    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  const inline = t => esc(t).replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>').replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
   let html = "", list = false;
   for (const raw of s.split("\n")) {
     const line = raw.trim();
     if (/^[-*•] /.test(line)) { if (!list) { html += "<ul>"; list = true; } html += `<li>${inline(line.slice(2))}</li>`; continue; }
     if (list) { html += "</ul>"; list = false; }
-    if (!line) continue;
-    html += `<p>${inline(line.replace(/^#+\s*/, ""))}</p>`;
+    if (!line || /^\|?[-: |]+\|?$/.test(line)) continue;
+    html += `<p>${inline(line.replace(/^#+\s*/, "").replace(/^\||\|$/g, "").replace(/\s*\|\s*/g, " · "))}</p>`;
   }
   return html + (list ? "</ul>" : "");
 }
 
-async function ask(payload, title) {
-  busy++;
-  const REC = MODE === "demo" && !!(payload.flight ? BRIEF[payload.flight.id] : ANSWERS[payload.question]);
-  const n = Date.now();
-  $("#feed").insertAdjacentHTML("afterbegin", `<div class="entry" id="e${n}"><div class="q">${esc(title)}</div><div class="trace" id="t${n}"></div><div id="a${n}"></div></div>`);
-  const T = $("#t" + n), A = $("#a" + n);
-  $("#scroll").scrollTop = 0;
-  const thinking = () => { T.querySelector(".think")?.remove(); T.insertAdjacentHTML("beforeend", `<div class="row think"><span class="dot"></span><span class="arg">${REC ? "Claude is reasoning…" : "working…"}</span></div>`); };
-  const handle = ev => {
-    if (ev.type === "thinking") thinking();
-    else if (ev.type === "step") { T.querySelector(".think")?.remove();
-      T.insertAdjacentHTML("beforeend", `<div class="row" data-id="${esc(ev.id)}"><span>${ev.tool === "web_search" ? "🔎" : "📄"}</span><span class="arg">${esc(ev.arg)}</span><span class="meta"><span class="dot"></span></span></div>`); }
-    else if (ev.type === "step_done") { const m = T.querySelector(`[data-id="${CSS.escape(ev.id)}"] .meta`);
-      if (m) { if (ev.ok) { m.className = "meta"; m.textContent = ev.results != null ? `${ev.results} results` : `${(ev.ms/1000).toFixed(1)}s`; } else { m.className = "meta retry"; m.title = "retrying"; m.innerHTML = '<span class="spin-r">↻</span> retrying'; } } }
-    else if (ev.type === "answer") { T.querySelector(".think")?.remove(); T.querySelectorAll(".spin-r").forEach(x => x.classList.remove("spin-r")); A.innerHTML = `<div class="ans">${md(ev.text)}<div class="t">Recorded ${new Date(DATA.recorded * 1000).toLocaleDateString([], { month:"short", day:"numeric" })} · took ${ev.seconds}s live · Claude web search · AI-generated, may contain errors</div></div>`; }
-    else if (ev.type === "error") { T.querySelector(".think")?.remove(); A.innerHTML = `<div class="ans err">${esc(ev.message)}</div>`; }
-  };
-  thinking();
-  const events = MODE === "demo" ? (payload.flight ? BRIEF[payload.flight.id] : ANSWERS[payload.question]) : null;
-  if (!events) {
-    try { await serve(payload, T, A); }
-    catch (e) { T.querySelector(".think")?.remove(); A.innerHTML = `<div class="ans err">${esc(e.message)}</div>`; }
-    busy--; return;
-  }
-  const wait = ms => new Promise(r => setTimeout(r, ms));
-  const steps = events.filter(e => e.type === "step"), done = events.filter(e => e.type === "step_done");
-  const answer = events.find(e => e.type === "answer");
-  await wait(700);
-  for (const s of steps) { handle(s); await wait(450); }
-  for (const d of done) { handle(d); await wait(350); }
-  if (steps.length) { thinking(); await wait(900); }
-  handle(answer);
-  busy--;
-}
-
-const askPayload = q => { const v = visibleFlights(); return { question:q, flights:v.slice(0, 300), visible_count:v.length }; };
-$("#askf").onsubmit = e => { e.preventDefault(); const q = $("#askq").value.trim(); if (!q) return; $("#askq").value = ""; askChip(q); };
-const BAY_VIEW = () => map.flyTo([37.62, -122.25], 9, { duration:.8 });
-const askChip = q => { const key = Object.keys(ANSWERS).find(k => k.toLowerCase() === q.toLowerCase().trim());
-  if (key && MODE === "demo") { selected = null; renderSel(); BAY_VIEW(); ask({ question:key }, key + "  · recorded for the Bay Area view"); }
-  else if (key) ask({ question:key, code:true }, key);
-  else ask({ question:q }, q); };
-document.querySelectorAll(".chip").forEach(c => c.onclick = () => askChip(c.textContent));
-
-let t; map.on("moveend", () => { clearTimeout(t); t = setTimeout(refresh, 400); });
-// ===================== live mode, briefings and chat (Cloudflare Worker, free tier) =====================
-const API = "https://skywatch-api.babusovereign.workers.dev";
-const SITEKEY = "0x4AAAAAAFfsHx-sd93jUbEk";
-let MODE = "demo", HUMAN = null, HUMAN_AT = 0, PASS = null, PASS_EXP = 0, LIVE_LEFT = 3, liveTimer = null, tickTimer = null;
-
-function turnstileToken() {
-  return new Promise((resolve, reject) => {
-    const go = () => {
-      const id = turnstile.render("#ts", { sitekey:SITEKEY, action:"skywatch", appearance:"interaction-only",
-        callback:t => { resolve(t); setTimeout(() => turnstile.remove(id), 0); },
-        "error-callback":() => { reject(new Error("Couldn't confirm you're human. Refresh and try again.")); turnstile.remove(id); } });
-    };
-    if (window.turnstile) go(); else { let n = 0; const iv = setInterval(() => { if (window.turnstile) { clearInterval(iv); go(); } else if (++n > 50) { clearInterval(iv); reject(new Error("Verification didn't load. Check your connection.")); } }, 200); }
-  });
-}
-async function human() {
-  if (HUMAN && Date.now() - HUMAN_AT < 50 * 60 * 1000) return HUMAN;
-  const r = await fetch(API + "/verify", { referrerPolicy:"no-referrer-when-downgrade", method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ token: await turnstileToken() }) });
-  const d = await r.json(); if (!r.ok) throw new Error(d.error || "Verification failed.");
-  HUMAN = d.human; HUMAN_AT = Date.now(); LIVE_LEFT = d.liveLeft; setModeUI(); return HUMAN;
-}
-async function post(path, body) {
-  const r = await fetch(API + path, { referrerPolicy:"no-referrer-when-downgrade", method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ ...body, human: await human() }) });
-  const d = await r.json().catch(() => ({}));
-  if (r.status === 401) { HUMAN = null; throw new Error("Session check expired. Please try again."); }
-  if (!r.ok) throw new Error(d.error || "Something went wrong.");
-  return d;
-}
-
-function setModeUI() {
-  const live = MODE === "live", btn = $("#golive");
-  $("#modetag").textContent = live ? "LIVE" : "DEMO";
-  $("#modetag").classList.toggle("on", live); $("#dot").classList.toggle("on", live); $("#dot").classList.toggle("rec", !live);
-  btn.classList.toggle("stop", live);
-  if (live) { const s = Math.max(0, Math.round(PASS_EXP - Date.now() / 1000)); btn.textContent = `■ Back to demo · ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; btn.disabled = false; }
-  else { btn.textContent = "● Go live · 5 min"; btn.disabled = LIVE_LEFT <= 0; }
-  $("#livenote").textContent = live ? `adsb.lol · ${LIVE_LEFT} left today` : LIVE_LEFT > 0 ? `${LIVE_LEFT} live session${LIVE_LEFT === 1 ? "" : "s"} left today` : "Live is used up today (resets 5 PM PT)";
-}
-
-async function goLive() {
-  const btn = $("#golive"); btn.disabled = true; $("#livenote").textContent = "checking…";
-  try {
-    const d = await post("/session", {});
-    PASS = d.pass; PASS_EXP = d.exp; LIVE_LEFT = d.liveLeft; MODE = "live";
-    planes.clear(); ALL = []; flights = []; selected = null; renderSel();
-    if (map.getZoom() < 7) map.setZoom(8);
-    setModeUI(); await fetchLive();
-    liveTimer = setInterval(fetchLive, 10000);
-    tickTimer = setInterval(() => { if (Date.now() / 1000 >= PASS_EXP) backToDemo("Live session finished — back to the recorded demo."); else setModeUI(); }, 1000);
-  } catch (e) { $("#livenote").textContent = e.message; btn.disabled = false; setTimeout(setModeUI, 5000); }
-}
-function backToDemo(msg) {
-  clearInterval(liveTimer); clearInterval(tickTimer); MODE = "demo"; PASS = null; selected = null; renderSel();
-  planes.clear(); loadDemoPlanes(); setModeUI(); refresh();
-  if (msg) $("#livenote").textContent = msg;
-}
-$("#golive").onclick = () => MODE === "live" ? backToDemo() : goLive();
-
-function liveRadiusNm() {
-  const c = map.getCenter(), b = map.getBounds();
-  return Math.min(250, Math.ceil(c.distanceTo(b.getNorthEast()) / 1852));
-}
-async function fetchLive() {
-  if (MODE !== "live" || !PASS) return;
-  const c = map.getCenter(), r = liveRadiusNm();
-  try {
-    const res = await fetch(`${API}/live?lat=${c.lat.toFixed(2)}&lon=${c.lng.toFixed(2)}&r=${r}`, { referrerPolicy:"no-referrer-when-downgrade", headers:{ "X-Pass":PASS } });
-    if (res.status === 401) return backToDemo("Live session finished — back to the recorded demo.");
-    const d = await res.json(); if (!res.ok) throw new Error(d.error || res.status);
-    applyLive(d);
-    const wide = map.getCenter().distanceTo(map.getBounds().getNorthEast()) / 1852 > 250;
-    $("#hudmeta").textContent = `${visibleFlights().length.toLocaleString()} in view · live within ${d.radiusNm} nm of the center${wide ? " — zoom in to see all of it" : ""} · ${new Date(d.time * 1000).toLocaleTimeString()}`;
-    renderStats();
-  } catch (e) { $("#hudmeta").textContent = "live feed hiccup: " + String(e.message).slice(0, 60); }
-}
-function applyLive(d) {
-  const now = performance.now(), t0 = now - Math.max(0, Date.now() / 1000 - d.time) * 1000, seen = new Set();
-  for (const f of d.flights) {
-    seen.add(f.id);
-    let p = planes.get(f.id);
-    const q = { lat:f.lat, lon:f.lon, spd:f.ground ? 0 : (f.spd || 0), hdg:f.hdg || 0, t0, offLat:0, offLon:0, offT:now };
-    if (p) {
-      const [la, lo] = posOf(p, now), [nla, nlo] = posOf(q, now);
-      let oLat = la - nla, oLon = lo - nlo; if (Math.abs(oLat) > 1 || Math.abs(oLon) > 1) { oLat = 0; oLon = 0; }
-      Object.assign(p, q, { offLat:oLat, offLon:oLon });
-    } else { p = q; planes.set(f.id, p); }
-    p.f = f; p.b = bucketOf(f);
-  }
-  for (const id of planes.keys()) if (!seen.has(id)) planes.delete(id);
-  ALL = d.flights; const b = bbox();
-  flights = ALL.filter(f => f.lat >= b.lamin && f.lat <= b.lamax && f.lon >= b.lomin && f.lon <= b.lomax);
-  if (selected) { const s = ALL.find(f => f.id === selected.id); if (s) { selected = s; renderSel(false); } }
-}
-
-// Code-answered questions: instant, free, always correct for what's on screen.
+// ---------- questions: suggested ones answered in code; anything else goes to the chat ----------
+const L1 = f => `**${f.cs}**${f.airline ? ` (${f.airline})` : ""}`;
+const where = f => f.route ? ` on ${f.route.split("-").map(c => SNAP.airports[c]?.[1] || c).join(" → ")}${f.routeOk ? "" : " (published route)"}` : "";
 function codeAnswer(q) {
-  const vis = visibleFlights(), air = vis.filter(f => !f.ground), L = f => `**${f.cs}**${f.type ? ` (${f.type})` : ""}`;
-  if (/fastest/i.test(q)) { const f = air.filter(x => x.spd != null).sort((a, b) => b.spd - a.spd)[0];
-    return f ? `${L(f)} is fastest in view at **${kt(f.spd)} kt**, ${ft(f.alt)?.toLocaleString() ?? "?"} ft, heading ${Math.round(f.hdg)}°. Tap it and press Brief me to see where it's going.` : "No airborne planes in view."; }
-  if (/climbing/i.test(q)) { const top = air.filter(x => (x.vr ?? 0) > 0).sort((a, b) => b.vr - a.vr).slice(0, 5);
-    return top.length ? "Fastest climbers in view:\n" + top.map(f => `- ${L(f)}: +${fpm(f.vr).toLocaleString()} ft/min at ${ft(f.alt)?.toLocaleString()} ft`).join("\n") : "Nobody is climbing in view right now."; }
-  if (/airlines/i.test(q)) { const m = {}; for (const f of vis) { const k = (/^[A-Z]{3}\d/.test(f.cs) ? f.cs.slice(0, 3) : null); if (k) m[k] = (m[k] || 0) + 1; }
+  const vis = visibleFlights(), air = vis.filter(f => !f.ground);
+  if (/fastest/i.test(q)) { const f = air.filter(x => x.kt != null).sort((a, b) => b.kt - a.kt)[0];
+    return f ? `${L1(f)} is fastest in view at **${num(f.kt)} kt** and ${num(f.altFt)} ft${where(f)}.` : "No airborne planes in view."; }
+  if (/climbing/i.test(q)) { const top = air.filter(x => (x.fpm ?? 0) > 0).sort((a, b) => b.fpm - a.fpm).slice(0, 5);
+    return top.length ? "Fastest climbers in view:\n" + top.map(f => `- ${L1(f)}: +${num(f.fpm)} ft/min at ${num(f.altFt)} ft`).join("\n") : "Nobody is climbing in view right now."; }
+  if (/airlines/i.test(q)) { const m = {}; for (const f of vis) { const k = f.airline || ((/^([A-Z]{3})\d/.exec(f.cs) || [])[1] ? "Operator " + f.cs.slice(0, 3) : null); if (k) m[k] = (m[k] || 0) + 1; }
     const top = Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    return top.length ? "Airline codes in view (ICAO prefix · aircraft):\n" + top.map(([k, n]) => `- ${k} · ${n}`).join("\n") : "No airline callsigns in view."; }
-  if (/international/i.test(q)) { const intl = air.filter(f => f.country && f.country !== "United States" || /^(BAW|ANA|QFA|UAE|SIA|DLH|AFR|CPA|QTR|KLM|JAL|KAL|EVA|CAL|ACA|AMX|VIR|THY|ETD|AIC|CES|CSN|CCA|HAL|FJI|PAL|VOZ)\d/.test(f.cs)).slice(0, 10);
-    return intl.length ? "Likely international flights in view:\n" + intl.map(f => `- ${L(f)}${f.country ? ` · ${f.country}` : ""}`).join("\n") : "I don't see obvious international carriers in view."; }
+    return top.length ? "Airlines in view:\n" + top.map(([k, n]) => `- ${k}: ${n}`).join("\n") : "No airline flights in view."; }
+  if (/international/i.test(q)) {
+    const intl = air.filter(f => f.route && f.routeOk).filter(f => { const cc = new Set(f.route.split("-").map(c => SNAP.airports[c]?.[3]).filter(Boolean)); return cc.size > 1; }).slice(0, 10);
+    return intl.length ? "International flights in view (by published route):\n" + intl.map(f => `- ${L1(f)}${where(f)}`).join("\n") : "No international routes found among the planes in view."; }
   return null;
 }
 
-async function serve(payload, T, A) {
-  const stamp = t => `<div class="t">${t}</div>`;
-  if (payload.code) { T.querySelector(".think")?.remove(); A.innerHTML = `<div class="ans">${md(codeAnswer(payload.question))}${stamp("Computed from the aircraft in view")}</div>`; return; }
-  if (payload.flight) {
-    const f = payload.flight;
-    const d = await post("/brief", { flight:{ id:f.id, cs:f.cs, lat:f.lat, lon:f.lon, alt:f.alt, spd:f.spd, hdg:f.hdg, vr:f.vr, ground:f.ground, type:f.type || null } });
-    T.querySelector(".think")?.remove();
-    A.innerHTML = `<div class="ans">${md(d.text)}${stamp(d.ai ? "AI summary of public data · adsb.lol routes · built from public data" : `Public route data · adsb.lol${d.resting ? " · AI resting until 5 PM PT" : ""}`)}</div>`;
-    return;
-  }
+let HUMAN = null, HUMAN_AT = 0;
+function turnstileToken() {
+  return new Promise((resolve, reject) => {
+    const go = () => { const id = turnstile.render("#ts", { sitekey:SITEKEY, action:"skywatch", appearance:"interaction-only",
+      callback:t => { resolve(t); setTimeout(() => turnstile.remove(id), 0); },
+      "error-callback":() => { reject(new Error("Couldn't confirm you're human. Refresh and try again.")); turnstile.remove(id); } }); };
+    if (window.turnstile) go(); else { let n = 0; const iv = setInterval(() => { if (window.turnstile) { clearInterval(iv); go(); } else if (++n > 50) { clearInterval(iv); reject(new Error("Verification didn't load. Check your connection.")); } }, 200); }
+  });
+}
+const RP = { referrerPolicy:"no-referrer-when-downgrade" };
+async function human() {
+  if (HUMAN && Date.now() - HUMAN_AT < 50 * 60000) return HUMAN;
+  const r = await fetch(API + "/verify", { ...RP, method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ token: await turnstileToken() }) });
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Verification failed.");
+  HUMAN = d.human; HUMAN_AT = Date.now(); return HUMAN;
+}
+async function askChat(question) {
   const c = map.getCenter();
   const near = visibleFlights().map(f => ({ f, d:(f.lat - c.lat) ** 2 + (f.lon - c.lng) ** 2 })).sort((a, b) => a.d - b.d).slice(0, 60)
-    .map(({ f }) => ({ cs:f.cs, type:f.type || null, ground:f.ground, altFt:ft(f.alt), kt:kt(f.spd), hdg:Math.round(f.hdg || 0), fpm:fpm(f.vr), lat:+f.lat.toFixed(3), lon:+f.lon.toFixed(3) }));
-  const d = await post("/chat", { question:payload.question, flights:near });
-  T.querySelector(".think")?.remove();
-  for (const s of d.steps || []) T.insertAdjacentHTML("beforeend", `<div class="row"><span>${s.tool === "get_weather" ? "🌤" : s.tool === "get_airport" ? "🛬" : "🧭"}</span><span class="arg">${esc(s.tool.replace("get_", ""))}: ${esc(s.arg)}</span><span class="meta">done</span></div>`);
-  A.innerHTML = `<div class="ans">${md(d.text || "")}${stamp(d.gated ? "SkyWatch chat covers flights, airports, airlines, routes and weather" : d.resting ? "AI resting until 5 PM PT" : "Llama 4 Scout on Cloudflare · adsb.lol routes · Open-Meteo weather · may contain errors")}</div>`;
+    .map(({ f }) => ({ cs:f.cs, type:f.type, ground:f.ground, altFt:f.altFt, kt:f.kt, hdg:f.hdg, fpm:f.fpm, route:f.route, routeOk:f.routeOk }));
+  const send = async () => fetch(API + "/chat", { ...RP, method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ human: await human(), question, flights:near }) });
+  let r = await send(); if (r.status === 401) { HUMAN = null; r = await send(); }
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Something went wrong.");
+  return d;
 }
-setModeUI();
 
-load().catch(e => { $("#hudmeta").textContent = "could not load the recorded snapshot: " + e.message; });
+async function ask(q) {
+  const n = Date.now();
+  $("#feed").insertAdjacentHTML("afterbegin", `<div class="entry" id="e${n}"><div class="q">${esc(q)}</div><div class="trace" id="t${n}"><div class="row think"><span class="dot"></span><span class="arg">thinking…</span></div></div><div id="a${n}"></div></div>`);
+  const T = $("#t" + n), A = $("#a" + n); $("#scroll").scrollTop = 0;
+  const stamp = t => `<div class="t">${t}</div>`;
+  const coded = codeAnswer(q);
+  if (coded) { T.innerHTML = ""; A.innerHTML = `<div class="ans">${md(coded)}${stamp("Computed from the planes in view · as of " + ageText())}</div>`; return; }
+  try {
+    const d = await askChat(q);
+    T.innerHTML = (d.steps || []).map(s => `<div class="row"><span>${s.tool === "get_weather" ? "🌤" : "🛬"}</span><span class="arg">${esc(s.tool.replace("get_", ""))}: ${esc(s.arg)}</span><span class="meta">done</span></div>`).join("");
+    A.innerHTML = `<div class="ans">${md(d.text || "")}${stamp(d.gated ? "SkyWatch chat covers flights, airports, airlines, routes and weather" : d.resting ? "AI resting until 5 PM PT" : "AI answer · Built with Llama · weather by Open-Meteo · may contain errors")}</div>`;
+  } catch (e) { T.innerHTML = ""; A.innerHTML = `<div class="ans err">${esc(e.message)}</div>`; }
+}
+$("#askf").onsubmit = e => { e.preventDefault(); const q = $("#askq").value.trim(); if (!q) return; $("#askq").value = ""; ask(q); };
+document.querySelectorAll(".chip").forEach(c => c.onclick = () => ask(c.textContent));
+
+load().catch(e => { $("#hudmeta").textContent = "Couldn't load flights: " + e.message; });
 </script>
 </body>
 </html>
