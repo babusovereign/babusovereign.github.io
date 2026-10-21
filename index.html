@@ -115,7 +115,7 @@ nav .links a.pill,.hero .cta a.pill:not(.ghost),.hellolinks a.pill:not(.ghost){c
 .portraitseal{display:block;width:min(300px,72vw);border:3px solid var(--seal);border-radius:50%;padding:6px;background:var(--cream)}
 .portraitseal img{display:block;width:100%;height:auto;border-radius:50%;border:2px dashed var(--seal);padding:6px;box-sizing:border-box;background:var(--sage)}
 
-.loomband{height:130px;overflow:hidden;background:var(--cream);border-radius:22px;margin-top:clamp(28px,4vw,40px)}
+.loomband{height:200px;overflow:hidden;background:var(--cream);border-radius:22px;margin-top:clamp(28px,4vw,40px)}
 .loomband canvas{display:block;width:100%;height:100%;cursor:pointer}
 .loomcap{font-size:.95rem;font-style:italic;color:var(--muted);text-align:center;margin:14px auto 0;padding-inline:20px}
 
@@ -175,7 +175,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
   .cardgrid,.ledgergrid{grid-template-columns:1fr}
   .lcard:first-child{grid-column:auto}
   .trio{grid-template-columns:1fr}
-  .loomband{height:100px}
+  .loomband{height:150px}
 }
 @media (max-width:600px){
   .jarcard{grid-template-columns:1fr;justify-items:center;text-align:center}
@@ -440,7 +440,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
         R.forEach(function(r,i){
           cx.beginPath();
           for(var x=0;x<=W;x+=3){
-            var y=mid
+            var y=0
               + r.a1*Math.sin(r.k1*x + r.s1*t + r.ph)
               + r.a2*Math.sin(r.k2*x + r.s2*t + r.ph*1.7)
               + (pass? r.a2*.6*Math.cos(r.k1*1.7*x - r.s1*t + r.ph) : 0);
@@ -448,7 +448,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
               var rp=ripples[j],dx=x-rp.x;
               y+=rp.amp*Math.exp(-dx*dx/5200 - rp.age*2.2)*Math.sin(.05*dx - rp.age*7 + i);
             }
-            x===0?cx.moveTo(x,y):cx.lineTo(x,y);
+            y=mid+y*H/130;x===0?cx.moveTo(x,y):cx.lineTo(x,y);
           }
           cx.strokeStyle=cols[i];cx.globalAlpha=pass?.35:.8;cx.lineWidth=pass?1:1.6;cx.stroke();
         });
