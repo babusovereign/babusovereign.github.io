@@ -76,7 +76,7 @@ body{margin:0;background:var(--paper)}
 /* ===== DESKTOP (>=1100px): the flat-card design ===== */
 #site-desktop{
 
-#top,#stack,#work,#morsel,#play,#now,#hello{scroll-margin-top:86px}
+#top,#stack,#work,#morsel,#play,#sky,#builds,#now,#hello{scroll-margin-top:86px}
 &{margin:0;background:var(--paper);color:var(--ink);font-family:var(--display);font-size:18.5px;line-height:1.72;-webkit-font-smoothing:antialiased}
 a{color:var(--green);text-decoration:none}
 a:hover{text-decoration:underline;text-underline-offset:3px}
@@ -219,6 +219,26 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 #play .huntctl{margin-top:16px}
 #play .hellolinks{margin-top:34px}
 #play .apple,#play .body{transform-box:fill-box;transform-origin:50% 100%}
+#sky{padding-bottom:64px !important}
+#sky .skyvid{display:block;position:relative;max-width:720px;margin:clamp(36px,5vw,56px) auto 0;border-radius:22px;overflow:hidden;background:var(--darkcard);aspect-ratio:16/9;background-image:radial-gradient(circle at 50% 50%,transparent 0 22%,rgba(211,175,92,.18) 22.3% 22.6%,transparent 23% 44%,rgba(211,175,92,.14) 44.3% 44.6%,transparent 45%)}
+#sky .skyvid img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .4s ease;color:transparent}
+#sky .skyvid:hover img{transform:scale(1.02)}
+#sky .skyplay{position:absolute;left:50%;top:50%;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+#sky .skyplay svg{width:26px;height:26px;margin-left:4px;fill:var(--pilltext)}
+#sky .hellolinks{margin-top:34px}
+#sky .hellolinks a.pill.ghost{color:var(--darktext);border-color:var(--darkmuted)}
+#sky .hellolinks a.pill.ghost:hover{color:var(--darktag);border-color:var(--darktag)}
+#sky .fine{color:var(--darkmuted);max-width:640px;margin-inline:auto}
+#sky .fine a{color:var(--darktag)}
+#builds{background:var(--sage);padding-bottom:64px !important}
+.duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:clamp(36px,5vw,56px)}
+@media (max-width:720px){.duo{grid-template-columns:1fr}}
+.duo .card .tag{font:600 .74rem var(--ui);letter-spacing:.16em;text-transform:uppercase;color:var(--goldtext)}
+.duo .card h3{margin-top:8px}
+.duo .card p{color:var(--muted);margin-top:10px}
+.pagehead{padding-block:clamp(56px,8vw,96px) clamp(24px,4vw,40px);text-align:center}
+.pagehead h1{font-size:clamp(2rem,5vw,3rem)}
+.pagehead .back{display:inline-block;margin-top:22px;font:600 .88rem var(--ui);color:var(--muted)}
 #play .vill.hit .apple{animation:burst .45s ease forwards}
 #play .vill.faint .body{animation:faint .6s ease forwards}
 #play .vill.faint{opacity:.75}
@@ -240,7 +260,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     <div class="links">
       <a href="#work">Work</a>
       <a href="#morsel">Morsel Jar</a>
-      <a href="#play">Play</a>
+      <a href="/builds/">Builds</a>
       <a href="#now">Now</a>
       <a class="pill" href="#hello">Say hello</a>
     </div>
@@ -366,24 +386,23 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
   </div>
 </section>
 
-<section class="band" id="play">
+<section class="band" id="builds">
   <div class="shell">
-    <p class="kicker">Just for fun</p>
-    <h2 class="statement">And a game, in one evening.</h2>
-    <p class="lede">Robin Hoodwinked is a silly medieval archery game I built with Claude Code at a Claude Community Build Day in San Francisco. Someone stole the King's pie. The thief always lies, everyone else tells the truth, and you settle it with a bow.</p>
-    <div class="huntcard">
-      <p class="huntrule"><b>Try one here.</b> Read what they say, then tap the thief's apple.</p>
-      <div class="hunters" role="group" aria-label="Three villagers. Pick the one who stole the pie."></div>
-      <p class="huntmsg" aria-live="polite">One of them is lying.</p>
-      <div class="huntctl">
-        <button type="button" class="pill ghost huntnext" hidden>Another round</button>
-      </div>
+    <p class="kicker">Builds</p>
+    <h2 class="statement">And a few things I built at Claude events.</h2>
+    <div class="duo">
+      <a class="card" href="/builds/#sky" style="color:inherit;text-decoration:none">
+        <span class="tag">Live web · AI agent</span>
+        <h3>SkyWatch</h3>
+        <p>Every plane in the sky on one live map, and a Claude agent that tells you what each one is.</p>
+      </a>
+      <a class="card" href="/builds/#play" style="color:inherit;text-decoration:none">
+        <span class="tag">Game</span>
+        <h3>Robin Hoodwinked</h3>
+        <p>A silly medieval archery game. The thief always lies, everyone else tells the truth, and you settle it with a bow.</p>
+      </a>
     </div>
-    <div class="hellolinks">
-      <a class="pill" href="/robin-hoodwinked/">Play Robin Hoodwinked</a>
-      <a class="pill ghost" href="https://github.com/babusovereign/robin-hoodwinked" target="_blank" rel="noopener">Read the source</a>
-    </div>
-    <p class="fine">The full game has ten rounds, wind, three arrows a round, and a King whose hat is very much in the way.</p>
+    <div class="hellolinks"><a class="pill" href="/builds/">See the builds</a></div>
   </div>
 </section>
 
