@@ -112,6 +112,10 @@
   .fineprint { font-size:11px; line-height:1.5; color:var(--muted); margin:6px 0 0; }
   .fineprint a { color:var(--muted); }
   .ans.brief { margin-top:4px; }
+  .credits { margin-top:14px; border-top:1px solid var(--line); padding-top:10px; font-size:12px; color:var(--muted); }
+  .credits summary { cursor:pointer; font:500 11px "JetBrains Mono",monospace; text-transform:uppercase; letter-spacing:.14em; }
+  .credits ul { margin:10px 0 6px; padding-left:16px; } .credits li { margin-bottom:6px; line-height:1.5; }
+  .credits b { color:var(--text); font-weight:600; } .credits a { color:var(--a1); }
 </style>
 </head>
 <body>
@@ -131,7 +135,22 @@
     <div class="note" id="intro">Real flights over the world's busiest airspace, <b>refreshed every 30 minutes</b> from open flight data; between refreshes, planes glide on from their speed and heading. Tap any plane for an instant briefing, or ask about flights, airports and weather below.</div>
     <p class="label">Airspace in view</p>
     <div class="stats" id="stats"></div>
-    <p class="fineprint">Flight data © <a href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a> contributors (<a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>) · routes &amp; airports: <a href="https://github.com/vradarserver/standing-data" target="_blank" rel="noopener">Virtual Radar Server</a> (CC0) · weather: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> · chat: Built with Llama · aircraft that opted out of tracking are hidden.</p>
+    <details class="credits">
+      <summary>Credits</summary>
+      <ul>
+        <li><b>Built by</b> <a href="https://www.linkedin.com/in/babusovereign" target="_blank" rel="noopener">Babu Sovereign Perumalla</a>, at <a href="https://luma.com/claude-9gt7" target="_blank" rel="noopener">Claude Code Build Night</a> in San Francisco, hosted by the Claude Community SF.</li>
+        <li><b>Built with</b> <a href="https://www.anthropic.com/claude" target="_blank" rel="noopener">Claude</a> by Anthropic: Claude Code at Build Night, and Claude as a pair-programmer for this page, its data pipeline and its chat service.</li>
+        <li><b>Flight data</b> © <a href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a> and the volunteers who feed it from their own receivers, under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>. The snapshot this page uses is <a href="https://github.com/babusovereign/babusovereign.github.io/tree/skywatch-data" target="_blank" rel="noopener">shared under the same license</a>.</li>
+        <li><b>Routes &amp; airports</b> from <a href="https://github.com/vradarserver/standing-data" target="_blank" rel="noopener">Virtual Radar Server standing data</a> (CC0), and the project's <a href="https://github.com/vradarserver/standing-data/blob/main/routes/schema-01/CREDITS.md" target="_blank" rel="noopener">route contributors</a>.</li>
+        <li><b>Weather</b> by <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0).</li>
+        <li><b>Chat AI</b>: Llama 4 Scout by Meta, running on <a href="https://developers.cloudflare.com/workers-ai/" target="_blank" rel="noopener">Cloudflare Workers AI</a>. Built with Llama.</li>
+        <li><b>Bot protection</b>: <a href="https://www.cloudflare.com/products/turnstile/" target="_blank" rel="noopener">Cloudflare Turnstile</a>. <b>Hosting</b>: GitHub Pages and GitHub Actions.</li>
+        <li><b>Map</b>: <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>; basemap © Esri, HERE, Garmin, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors and the GIS user community.</li>
+        <li><b>Type</b>: Space Grotesk (Florian Karsten), Inter (Rasmus Andersson) and JetBrains Mono (JetBrains), via Google Fonts (SIL Open Font License).</li>
+        <li><b>Original live app</b>: the version built at Build Night pulls live web data through <a href="https://brightdata.com" target="_blank" rel="noopener">Bright Data</a>. <a href="https://github.com/babusovereign/skywatch" target="_blank" rel="noopener">Source on GitHub</a>.</li>
+      </ul>
+      <p class="fineprint">Aircraft whose owners opted out of tracking (FAA LADD, privacy ICAO addresses) are never shown, and no registrations or owner details are stored.</p>
+    </details>
   </div>
   <div class="ask">
     <div class="chips">
@@ -199,7 +218,7 @@ const num = n => n == null ? "—" : Number(n).toLocaleString("en-US");
 const map = L.map("map", { zoomControl:false, attributionControl:true, minZoom:2, worldCopyJump:true }).setView([37.62, -122.25], 8);
 L.control.zoom({ position:"bottomleft" }).addTo(map);
 L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
-  attribution:'Tiles &copy; Esri · Flights &copy; <a href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a> (ODbL)', maxZoom:16 }).addTo(map);
+  attribution:'Tiles &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors · Flights &copy; <a href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a> (ODbL)', maxZoom:16 }).addTo(map);
 L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", { maxZoom:16, opacity:.8 }).addTo(map);
 
 const canvas = document.createElement("canvas");
