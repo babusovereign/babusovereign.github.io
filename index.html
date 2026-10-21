@@ -76,7 +76,7 @@ body{margin:0;background:var(--paper)}
 /* ===== DESKTOP (>=1100px): the flat-card design ===== */
 #site-desktop{
 
-#top,#stack,#work,#morsel,#play,#sky,#builds,#now,#hello{scroll-margin-top:86px}
+#top,#stack,#work,#morsel,#play,#sky,#builds,#now,#hello{scroll-margin-top:var(--navh,86px)}
 &{margin:0;background:var(--paper);color:var(--ink);font-family:var(--display);font-size:18.5px;line-height:1.72;-webkit-font-smoothing:antialiased}
 a{color:var(--green);text-decoration:none}
 a:hover{text-decoration:underline;text-underline-offset:3px}
@@ -504,7 +504,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     }).filter(Boolean);
     if(!pairs.length)return;
     function spy(){
-      var y=window.scrollY,probe=y+120,active=null;
+      var nb=document.querySelector('.navbar'),y=window.scrollY,probe=y+(nb?nb.offsetHeight:73)+60,active=null;
       pairs.forEach(function(p){
         if(p.sec.getBoundingClientRect().top+y<=probe)active=p;
       });
@@ -670,6 +670,15 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
   }
   next.addEventListener('click',function(){ri=(ri+1)%ROUNDS.length;render();var f=box.querySelector('button');if(f)f.focus()});
   render();
+})();
+</script>
+<script>
+/* Keep anchor jumps clear of the sticky nav, whose height changes when it wraps on phones */
+(function(){
+  var bar=document.querySelector('.navbar');if(!bar)return;
+  function set(){document.documentElement.style.setProperty('--navh',(bar.offsetHeight+13)+'px')}
+  set();window.addEventListener('resize',set);
+  window.addEventListener('load',function(){set();if(location.hash){var e=document.getElementById(location.hash.slice(1));if(e)e.scrollIntoView()}});
 })();
 </script>
 </body>
