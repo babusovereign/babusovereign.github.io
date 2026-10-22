@@ -728,7 +728,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     echelon:[[0,0],[-22,20],[-44,40],[-66,60]],
     abreast:[[0,0],[-3,-30],[-3,30],[-6,-60],[-6,60]],
     single:[[0,0]]};
-  /* The team flies short sets of 1-3 passes, then disappears for 15-45 s, as if it were working another part of the city */
+  /* The team flies short sets of 1-3 passes, then disappears for 5-15 s, as if it were working another part of the city */
   var show={groups:[],wait:2,last:'',left:1+Math.floor(Math.random()*3)}, ghosts=[];
   function rnd(a,b){return a+Math.random()*(b-a)}
   function sstep(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
@@ -805,11 +805,18 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     crossCenter:{w:1,run:function(){var X=[W*rnd(.3,.6),H*rnd(.35,.65)],sides=[0,1,2,3],g=sides.map(function(s){return grp({shape:'single',path:route({from:s,to:s<2?opp(s):(s===2?3:2),via:X}),v:V()*1.2})});sync(g,X);return g}}
   };
   /* First pass on every page load is a split-and-rejoin; after that, a join-up or split-and-rejoin is guaranteed at least once in every 4 passes */
+  /* Colour by position: jets on the centre line fly white, the side nearer the top of the screen red and the lower side blue
+     (judged from the pass's overall direction across the visible sky); an echelon is red at its upper end, blue at its lower end and white between; solo jets take turns */
+  function paint(gs){if(Math.random()>=.35)return;var solo=0,cs=['r','b','w'];gs.forEach(function(g){var S=SH[g.shape],n=S.length,P=g.path.p,dx=0,dy=0;
+    for(var j=1;j<P.length;j++)if(inView(P[j],0)&&inView(P[j-1],0)){dx+=P[j][0]-P[j-1][0];dy+=P[j][1]-P[j-1][1]}
+    var m=Math.hypot(dx,dy)||1,c=dx/m,sn=dy/m,up=function(o){return o[0]*sn+o[1]*c};
+    if(n>1&&g.shape==='echelon'){var ord=S.map(function(o,i){return i}).sort(function(x,y){return up(S[x])-up(S[y])});g.trails.forEach(function(t,i){var r=ord.indexOf(i);t.c=r===0?'r':r===n-1?'b':'w'});return}
+    g.trails.forEach(function(t,i){if(n===1){t.c=cs[solo++%3];return}var y=S[i][1];t.c=y===0?'w':((y*c<0)||(y*c===0&&y<0))?'r':'b'})})}
   function nextAct(){var names=Object.keys(ACTS).filter(function(n){return n!==show.last}),tot=0;
     if(!show.count)names=['splitRejoin'];else if(show.sinceJoin>=3)names=names.filter(function(n){return ACTS[n].join});names.forEach(function(n){tot+=ACTS[n].w});var r=Math.random()*tot,pick=names[0];
     for(var i=0;i<names.length;i++){r-=ACTS[names[i]].w;if(r<=0){pick=names[i];break}}
-    for(var tries=0;tries<12;tries++){var g=ACTS[pick].run();if(safe(g)){show.last=pick;show.groups=g;show.count=(show.count||0)+1;show.sinceJoin=ACTS[pick].join?0:(show.sinceJoin||0)+1;return}}
-    show.last='deltaPass';show.groups=[grp({shape:'delta',path:route(),v:V()})];show.count=(show.count||0)+1;show.sinceJoin=(show.sinceJoin||0)+1}
+    for(var tries=0;tries<12;tries++){var g=ACTS[pick].run();if(safe(g)){show.last=pick;show.groups=g;paint(g);show.count=(show.count||0)+1;show.sinceJoin=ACTS[pick].join?0:(show.sinceJoin||0)+1;return}}
+    show.last='deltaPass';show.groups=[grp({shape:'delta',path:route(),v:V()})];paint(show.groups);show.count=(show.count||0)+1;show.sinceJoin=(show.sinceJoin||0)+1}
   /* ---- per-jet motion ---- */
   function spreadOf(g,u){var f=g.f;if(u<=f[0][0])return f[0][1];for(var i=1;i<f.length;i++)if(u<=f[i][0]){var a=f[i-1],b=f[i];return a[1]+(b[1]-a[1])*sstep((u-a[0])/((b[0]-a[0])||1))}return f[f.length-1][1]}
   /* Splits and join-ups mostly widen the formation sideways (fore/aft spacing grows only a little), so jets drift apart in gentle arcs instead of swinging */
@@ -817,7 +824,11 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     if(g.roll){var r=(u-g.roll[0])/(g.roll[1]-g.roll[0]);if(r>0&&r<1)bank=Math.cos(2*Math.PI*sstep(r))}
     if(g.knife&&g.X){var dd=Math.hypot(q.x-g.X[0],q.y-g.X[1]);bank=1-.85*sstep(1-dd/160)}
     return{x:q.x-oy*Math.sin(q.h),y:q.y+oy*Math.cos(q.h),h:q.h,b:bank}}
-  function trailDraw(tr,smoke,dk){var n=tr.length;for(var j=1;j<n;j++){ctx.strokeStyle='rgba('+smoke+','+((dk?.5:.42)*(j/n)).toFixed(3)+')';ctx.beginPath();ctx.moveTo(tr[j-1][0],tr[j-1][1]);ctx.lineTo(tr[j][0],tr[j][1]);ctx.stroke()}}
+  var USA={r:['178,34,52','236,84,96'],w:['255,255,255','246,246,246'],b:['36,58,140','112,152,240']};
+  /* Some passes fly red, white and blue smoke (chosen at random); white gets a faint grey edge so it shows on the light page */
+  function trailDraw(tr,smoke,dk){var n=tr.length,c=tr.c?USA[tr.c][dk?1:0]:smoke,a=tr.c?(dk?.6:.6):(dk?.5:.42),lw=ctx.lineWidth;
+    if(tr.c==='w'&&!dk){ctx.lineWidth=lw*1.7;for(var j=1;j<n;j++){ctx.strokeStyle='rgba(120,132,124,'+(.22*(j/n)).toFixed(3)+')';ctx.beginPath();ctx.moveTo(tr[j-1][0],tr[j-1][1]);ctx.lineTo(tr[j][0],tr[j][1]);ctx.stroke()}ctx.lineWidth=lw;a=.95}
+    for(var j=1;j<n;j++){ctx.strokeStyle='rgba('+c+','+(a*(j/n)).toFixed(3)+')';ctx.beginPath();ctx.moveTo(tr[j-1][0],tr[j-1][1]);ctx.lineTo(tr[j][0],tr[j][1]);ctx.stroke()}}
   function draw(){ctx.clearRect(0,0,W,H);var dk=dark(),k=W<600?1:1.4,smoke=dk?'236,240,232':'120,132,124';ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=3*k;
     ghosts.forEach(function(tr){trailDraw(tr,smoke,dk)});
     show.groups.forEach(function(g){g.trails.forEach(function(tr){trailDraw(tr,smoke,dk)})});
@@ -830,7 +841,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
       for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i),tr=g.trails[i],lp=tr[tr.length-1];if(!lp||Math.hypot(J.x-lp[0],J.y-lp[1])>4){tr.push([J.x,J.y]);if(tr.length>MAX)tr.shift()}}
       var out=g.d>g.path.len*.4&&!g.trails.some(function(t,i){var J=jetAt(g,i);return inView([J.x,J.y],60)});
       if(g.d>=g.path.len+900||out)g.done=true;else alive++});
-    if(!alive){show.groups.forEach(function(g){g.trails.forEach(function(t){ghosts.push(t)})});show.groups=[];if(--show.left>0)show.wait=rnd(2,4);else{show.left=1+Math.floor(Math.random()*3);show.wait=rnd(15,45)}}}
+    if(!alive){show.groups.forEach(function(g){g.trails.forEach(function(t){ghosts.push(t)})});show.groups=[];if(--show.left>0)show.wait=rnd(2,4);else{show.left=1+Math.floor(Math.random()*3);show.wait=rnd(5,15)}}}
   function step(ts){if(!running)return;var dt=Math.min((ts-(last||ts))/1000,.1);last=ts;tick(dt);draw();raf=requestAnimationFrame(step)}
   /* Visitor's on/off switch, remembered in this browser */
   var vis=true,off=false;try{off=localStorage.getItem('airshow')==='off'}catch(e){}
