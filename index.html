@@ -1126,6 +1126,11 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
       function sx(p){return[b.ox+p[0]*k,b.oy+p[1]*k]}
       function fade(x){var t=b.gg?(br.right-cr.left-x)/br.width:(x-(br.left-cr.left))/br.width;return t<.2?1:Math.max(.3,1-.7*(t-.2)/.8)}
       cx.save();cx.beginPath();cx.rect(br.left-cr.left,br.top-cr.top,br.width,br.height);cx.clip();
+      /* Night: the decks are lit. A string of warm roadway lamps along each deck's top edge (the Bay Bridge's upper deck), closer together
+         and brighter at the near end, fading into the haze like the deck itself. Drawn on this canvas, so the bridge drawings stay locked */
+      if(dk){var lampLift=b.gg?1.15:1.05,gap=2.6;for(var d=gap*.5;d<b.len;d+=gap){var q=at(b,d),tq=q[2],Q=sx([q[0],q[1]-lampLift*tq]),la=fade(Q[0]);if(la<=0)continue;
+          var lr=Math.max(.5,.12*tq*k),g=cx.createRadialGradient(Q[0],Q[1],0,Q[0],Q[1],lr*4);g.addColorStop(0,'rgba(255,214,150,'+(.95*la).toFixed(3)+')');g.addColorStop(.25,'rgba(255,190,110,'+(.45*la).toFixed(3)+')');g.addColorStop(1,'rgba(255,170,80,0)');
+          cx.fillStyle=g;cx.beginPath();cx.arc(Q[0],Q[1],lr*4,0,6.2832);cx.fill()}}
       b.lanes.forEach(function(L){L.cars.forEach(function(c){
         var hl=c.l/2,end=Math.min(1,(L.dir>0?b.len-hl-c.d:c.d-hl)/3),r=at(b,c.d-hl),f=at(b,c.d+hl),t=at(b,c.d)[2],up=L.lift*t,h=.42*t;
         var R=sx([r[0],r[1]-up]),F=sx([f[0],f[1]-up]),a=fade(R[0])*Math.max(0,end);if(a<=0)return;
