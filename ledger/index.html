@@ -457,7 +457,8 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
       var max=doc.scrollHeight-window.innerHeight;
       var g=max>0?clamp01(window.scrollY/max):0;
       var x=m.x0+(m.x1-m.x0)*g;
-      if(lastG!==null&&g!==lastG)face=g>lastG?1:-1;lastG=g;
+      /* Faces the road ahead: right at the start, left at the end, otherwise the way the page is scrolling */
+      if(g<=0.001)face=1;else if(g>=0.999)face=-1;else if(lastG!==null&&g!==lastG)face=g>lastG?1:-1;lastG=g;
       car.style.transform='translate('+x.toFixed(1)+'px,'+m.top.toFixed(1)+'px) scaleX('+face+')';
     }
     var ticking=false;
