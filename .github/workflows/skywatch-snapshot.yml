@@ -4,7 +4,7 @@ name: SkyWatch snapshot
 # to the skywatch-data branch. Free for public repos; no secrets beyond the built-in GITHUB_TOKEN.
 on:
   schedule:
-    - cron: "7,37 * * * *"
+    - cron: "8,38 * * * *"
   workflow_dispatch:
   push:
     branches: [skywatch-live]
