@@ -1,0 +1,6 @@
+# Repo files that GitHub Pages must not publish as web pages
+exclude:
+  - README.md
+  - CLAUDE.md
+  - RUNNING-NOTES.md
+  - LICENSE

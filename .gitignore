@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+
+# Private agent notes: kept on the owner's machine only, never committed
+CLAUDE.md
+RUNNING-NOTES.md

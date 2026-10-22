@@ -11,11 +11,12 @@ are dropped entirely; registrations and owner/operator fields are never stored.
 
 Output: snapshot.json (compact). Usage: python3 snapshot.py <standing-data dir> <out file>
 """
-import csv, json, math, sys, time, urllib.error, urllib.request
+import csv, json, math, re, sys, time, urllib.error, urllib.request
 from pathlib import Path
 
 UA = {"User-Agent": "SkyWatch snapshot for babusovereign.com (contact via github.com/babusovereign)"}
 PIA, LADD, MIL = 4, 8, 1
+HEX_RE = re.compile(r"~?[0-9a-f]{6}")  # ICAO 24-bit address (TIS-B prefixed with ~); hex lands in DOM attributes client-side
 RADIUS = 250  # nm (adsb.lol maximum)
 # Busy airspace, roughly 6-8 degrees apart; overlapping circles are de-duplicated by transponder id.
 REGIONS = [
@@ -116,6 +117,8 @@ def main():
         now = int((d.get("now") or now * 1000) / 1000)
         for a in d.get("ac") or []:
             if a.get("lat") is None or a.get("lon") is None or (a.get("dbFlags") or 0) & (PIA | LADD):
+                continue
+            if not HEX_RE.fullmatch(str(a.get("hex") or "")):
                 continue
             if a["hex"] in seen and (seen[a["hex"]].get("seen_pos") or 99) <= (a.get("seen_pos") or 99):
                 continue
