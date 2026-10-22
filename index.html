@@ -38,11 +38,11 @@
 /* Layout: the banknote palette and Besley voice, set in the flat-card grammar
    (big soft radii, tonal fills, air) that Babu picked from template references. */
 :root{
-  --paper:#f3ecdf; --cream:#faf6ee; --ink:#1c3028; --muted:#566558; --rule:#d6cab0;
-  --green:#206b4e; --gold:#8f6d22; --goldtext:#7d6020; --seal:#9c3c2c; --sage:#ebe1cd;--morsel:#f7f1da; --teal:#0e6f68;
+  --paper:#f3ecdf; --cream:#faf6ee; --ink:#2a2521; --muted:#625649; --rule:#d6cab0;
+  --green:#8e3826; --gold:#8f6d22; --goldtext:#7d6020; --seal:#9c3c2c; --sage:#ebe1cd;--morsel:#f3ecdf; --teal:#8e3826;
   --pilltext:#f6f6ee; --pullbtntext:#ffffff;
-  --darkband:#1c3028; --darkcard:#28392f; --darktext:#f6f6ee; --darkmuted:#a7b5a7; --darktag:#d3af5c;
-  --r1:#206b4e; --r2:#8f6d22; --r3:#9c3c2c; --r4:#3d5a82;
+  --darkband:#2a2521; --darkcard:#3a322b; --darktext:#f6f6ee; --darkmuted:#b9ab99; --darktag:#d3af5c;
+  --r1:#7b4b72; --r2:#8f6d22; --r3:#9c3c2c; --r4:#3d5a82;
   --display:"Besley",Georgia,"Times New Roman",serif;
   --ui:"Archivo","Helvetica Neue",Arial,sans-serif;
 }
@@ -282,10 +282,10 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #site-desktop .herosky .portraitseal{background:#1b1f24}:root:not([data-theme="light"]) #site-desktop .herosky .portraitseal img{background:#6b7077}}
 :root[data-theme="dark"] #site-desktop .herosky .portraitseal{background:#1b1f24}:root[data-theme="dark"] #site-desktop .herosky .portraitseal img{background:#6b7077}
 /* Light mode: the clear-day blue is strong, so the small text over it goes a shade deeper to stay readable */
-@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) #site-desktop .navbar,:root:not([data-theme="dark"]) #site-desktop .herosky{--muted:#2e3a31;--goldtext:#3f3006}
-:root:not([data-theme="dark"]) #site-desktop .herosky .hero .promise{color:#0f3d2b}}
-:root[data-theme="light"] #site-desktop .navbar,:root[data-theme="light"] #site-desktop .herosky{--muted:#2e3a31;--goldtext:#3f3006}
-:root[data-theme="light"] #site-desktop .herosky .hero .promise{color:#0f3d2b}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) #site-desktop .navbar,:root:not([data-theme="dark"]) #site-desktop .herosky{--muted:#3b332c;--goldtext:#3f3006}
+:root:not([data-theme="dark"]) #site-desktop .herosky .hero .promise{color:#2a2521}}
+:root[data-theme="light"] #site-desktop .navbar,:root[data-theme="light"] #site-desktop .herosky{--muted:#3b332c;--goldtext:#3f3006}
+:root[data-theme="light"] #site-desktop .herosky .hero .promise{color:#2a2521}
 #site-desktop .navbar{background:color-mix(in srgb,var(--skytop) 82%,transparent)}
 @supports not (backdrop-filter: blur(1px)){#site-desktop .navbar{background:var(--skytop)}}}
 .herosky .skycv{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;display:block}
@@ -421,7 +421,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     <p class="loomcap">Four threads of one career, woven like the pattern on a banknote — engravers use it because it's hard to fake. Click to stir the loom.</p>
     <div class="cardgrid">
       <div class="card">
-        <svg class="wave" viewBox="0 0 30 12" aria-hidden="true"><path d="M1 6 Q 8 0 15 6 T 29 6" fill="none" stroke="#206b4e" stroke-width="2.4" stroke-linecap="round"></path></svg>
+        <svg class="wave" viewBox="0 0 30 12" aria-hidden="true"><path d="M1 6 Q 8 0 15 6 T 29 6" fill="none" stroke="#7b4b72" stroke-width="2.4" stroke-linecap="round"></path></svg>
         <h3>Distributed backends</h3>
         <p>Home base — services that stay up through holiday peak, and APIs other teams actually enjoy consuming. <i><span style="color:var(--muted)">Mostly Java, Spring Boot, Kafka and GraphQL.</span></i></p>
       </div>
