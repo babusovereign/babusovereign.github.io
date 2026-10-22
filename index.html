@@ -362,7 +362,9 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 .themetoggle .sun{display:none}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .themetoggle .sun{display:inline}:root:not([data-theme="light"]) .themetoggle .moon{display:none}}
 :root[data-theme="dark"] .themetoggle .sun{display:inline}:root[data-theme="dark"] .themetoggle .moon{display:none}
-@media (max-width:600px){.themetoggle{width:28px;height:28px}.themetoggle svg{width:15px;height:15px}}
+/* Phones: the switch shrinks to 26px but keeps a 42px invisible tap area, and the nav spacing scales with the screen so everything fits on one row down to 320px */
+@media (max-width:600px){.themetoggle{width:26px;height:26px;position:relative}.themetoggle::after{content:"";position:absolute;inset:-8px}.themetoggle svg{width:14px;height:14px}
+  #site-desktop nav{gap:clamp(5px,2vw,10px)}#site-desktop nav .links{gap:clamp(5px,2.2vw,12px);font-size:clamp(.62rem,3.1vw,.8rem)}#site-desktop nav .brand svg{width:clamp(44px,19vw,84px);height:auto}}
 </style>
 </head>
 <body>
