@@ -1058,9 +1058,9 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 /* Traffic on the Bay Bridge and the Golden Gate. The bridge code is locked: like the sea, this only reads where the decks are.
    The Golden Gate has one lane each way, its two lanes side by side on its deck; the Bay Bridge is double-decked,
    so outgoing traffic (heading away) rides the upper deck in two lanes and incoming traffic (coming toward you) the lower deck,
-   inside the deck band, dimmed as if seen through the truss. A lane runs at one speed and a car only enters after a gap, so no car ever catches another.
+   inside the deck band, dimmed as if seen through the truss. Vehicles keep at least one car length apart (see tick below).
    Distances are measured in car lengths along the deck, so cars shrink and slow toward the far ends just like the bridges.
-   Daytime: small cars. Night: white headlights coming toward you, red taillights heading away. Reduce Motion holds them still. */
+   Daytime: small cars, box trucks and buses. Night: white headlights coming toward you, red taillights heading away. Reduce Motion holds them still. */
 (function(){
   var hero=document.querySelector('.herosky'),sk=hero&&hero.querySelector('.skycv'),svs=document.querySelectorAll('.bridges .br');if(!hero||!sk||svs.length<2)return;
   var cv=document.createElement('canvas');cv.className='carcv';cv.setAttribute('aria-hidden','true');sk.parentNode.insertBefore(cv,sk);
@@ -1071,13 +1071,32 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
   var B=[].map.call(svs,function(sv){var pg=sv.querySelector('polygon'),n=pg.points.numberOfItems,h=n>>1,top=[],th=[],w=[0],i;
     for(i=0;i<h;i++){var a=pg.points.getItem(i),b=pg.points.getItem(n-1-i);top.push([a.x,a.y]);th.push(b.y-a.y)}
     for(i=1;i<h;i++){var dx=Math.max(.05,Math.abs(top[i][0]-top[i-1][0])),r=(th[i]+th[i-1])/2/dx;w.push(w[i-1]+1/(1.1*r))}
-    return {sv:sv,gg:sv.classList.contains('gg'),top:top,th:th,w:w,len:w[h-1],lanes:(sv.classList.contains('gg')?[{dir:-1,v:2.7,lift:.34},{dir:1,v:3,lift:0}]:[{dir:-1,v:2.7,lift:-.86,dim:.55},{dir:1,v:3.3,lift:.3},{dir:1,v:2.9,lift:0}]).map(function(L){L.cars=[];L.gap=Math.random()*3;return L})}});
+    return {sv:sv,gg:sv.classList.contains('gg'),top:top,th:th,w:w,len:w[h-1],busy:sv.classList.contains('gg'),lanes:(sv.classList.contains('gg')?[{dir:-1,v:1.65,lift:.34},{dir:1,v:1.8,lift:0}]:[{dir:-1,v:1.6,lift:-.86,dim:.55},{dir:1,v:1.95,lift:.3},{dir:1,v:1.7,lift:0}]).map(function(L){L.cars=[];L.gap=Math.random()*3;L.scale=1;L.mood=0;return L})}});
   /* point on the deck's top edge at distance d (car lengths from the near end), with the deck's thickness there */
   function at(b,d){var w=b.w,lo=0,hi=w.length-1;d=Math.max(0,Math.min(w[hi],d));while(hi-lo>1){var m=(lo+hi)>>1;if(w[m]<=d)lo=m;else hi=m}
     var f=(d-w[lo])/Math.max(1e-6,w[hi]-w[lo]),p=b.top[lo],q=b.top[hi];return[p[0]+(q[0]-p[0])*f,p[1]+(q[1]-p[1])*f,b.th[lo]+(b.th[hi]-b.th[lo])*f]}
+  /* Mostly cars, some box trucks and buses. Lengths are in car lengths; the next vehicle is picked in advance so the gap
+     before it enters always covers its own length plus clear road, whatever is ahead of it */
+  var KINDS=[{k:'car',l:1,p:.8},{k:'truck',l:2.4,p:.12},{k:'bus',l:2.2,p:.08}],TRUCK=['#ece9e1','#d2d5d1','#bfc6cc'],BUS=['#c8513a','#e8e3d8','#d9a441','#3f6f8f'];
+  function pick(){var r=Math.random(),i=0;while(i<KINDS.length-1&&(r-=KINDS[i].p)>0)i++;var K=KINDS[i];
+    return {k:K.k,l:K.l,c:COL[Math.floor(Math.random()*COL.length)],t:K.k==='truck'?TRUCK[Math.floor(Math.random()*TRUCK.length)]:K.k==='bus'?BUS[Math.floor(Math.random()*BUS.length)]:null}}
+  /* Random traffic: every vehicle has its own cruising speed (trucks and buses a little slower) and follows the one ahead,
+     easing off to keep at least one car length of clear road, so bunches form and dissolve but nothing ever touches.
+     Each lane's flow drifts between busier and quieter spells; the Golden Gate runs heavier than the Bay Bridge */
+  var CLEAR=1;
+  function prog(b,L,c){return L.dir>0?c.d:b.len-c.d}
   function tick(dt){B.forEach(function(b){b.lanes.forEach(function(L){
-    for(var i=L.cars.length-1;i>=0;i--){var c=L.cars[i];c.d+=L.dir*L.v*dt;if(c.d<.5||c.d>b.len-.5)L.cars.splice(i,1)}
-    L.gap-=L.v*dt;if(L.gap<=0){L.cars.push({d:L.dir>0?.5:b.len-.5,c:COL[Math.floor(Math.random()*COL.length)]});L.gap=1+(Math.random()<.15?rnd(6,12):rnd(1.4,5))}})})}
+    L.mood-=dt;if(L.mood<=0){L.scale=rnd(.45,1.8);L.mood=rnd(6,18)}
+    L.cars.sort(function(x,y){return prog(b,L,y)-prog(b,L,x)});
+    for(var i=0;i<L.cars.length;i++){var c=L.cars[i],p=prog(b,L,c),ld=L.cars[i-1],tgt=c.v;
+      if(ld){var gap=prog(b,L,ld)-ld.l/2-p-c.l/2;if(gap<CLEAR*2.2)tgt=Math.min(tgt,ld.s*(gap<CLEAR*1.4?.85:1))}
+      c.s+=(tgt-c.s)*Math.min(1,dt*1.6);var np=p+Math.max(0,c.s)*dt;
+      if(ld)np=Math.min(np,prog(b,L,ld)-(ld.l+c.l)/2-CLEAR);np=Math.max(p,np);c.d=L.dir>0?np:b.len-np}
+    for(i=L.cars.length-1;i>=0;i--){c=L.cars[i];if(c.d<c.l/2-1e-6||c.d>b.len-c.l/2)L.cars.splice(i,1)}
+    if(!L.next)L.next=pick();
+    L.gap-=L.v*dt;if(L.gap<=0){var n=L.next,last=L.cars[L.cars.length-1],room=last?prog(b,L,last)-last.l/2-n.l:1e9;
+      if(room>=CLEAR){n.d=L.dir>0?n.l/2:b.len-n.l/2;n.v=L.v*rnd(.8,1.15)*(n.k==='car'?1:.88);n.s=last&&room<CLEAR*2.2?Math.min(n.v,last.s):n.v;L.cars.push(n);L.next=pick();
+        var cl=b.busy?(Math.random()<.12?rnd(3.5,7):rnd(.8,2.8)):(Math.random()<.15?rnd(6,12):rnd(1.4,4.5));L.gap=L.next.l+cl*L.scale}}})})}
   function size(){var r=hero.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);W=r.width;H=r.height;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
   function draw(){cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,W,H);if(!cv.getClientRects().length)return;var dk=dark(),cr=cv.getBoundingClientRect();
     B.forEach(function(b){if(!b.sv.getClientRects().length)return;var m=b.sv.getScreenCTM();if(!m)return;var br=b.sv.getBoundingClientRect(),k=Math.sqrt(Math.abs(m.a*m.d-m.b*m.c));
@@ -1085,16 +1104,26 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
       function fade(x){var t=b.gg?(br.right-cr.left-x)/br.width:(x-(br.left-cr.left))/br.width;return t<.2?1:Math.max(.3,1-.7*(t-.2)/.8)}
       cx.save();cx.beginPath();cx.rect(br.left-cr.left,br.top-cr.top,br.width,br.height);cx.clip();
       b.lanes.forEach(function(L){L.cars.forEach(function(c){
-        var end=Math.min(1,(L.dir>0?b.len-.5-c.d:c.d-.5)/3),r=at(b,c.d-.5),f=at(b,c.d+.5),mid=at(b,c.d),t=mid[2],up=L.lift*t,h=.42*t;
+        var hl=c.l/2,end=Math.min(1,(L.dir>0?b.len-hl-c.d:c.d-hl)/3),r=at(b,c.d-hl),f=at(b,c.d+hl),t=at(b,c.d)[2],up=L.lift*t,h=.42*t;
         var R=sx([r[0],r[1]-up]),F=sx([f[0],f[1]-up]),a=fade(R[0])*Math.max(0,end);if(a<=0)return;
-        if(dk){var lp=sx([r[0],r[1]-up-h*.45]),rad=Math.max(.5,.2*t*k),g=cx.createRadialGradient(lp[0],lp[1],0,lp[0],lp[1],rad*3.2),col=L.dir>0?'255,92,72':'255,236,200';
-          a*=L.dim?.8:1;g.addColorStop(0,'rgba('+col+','+(.95*a).toFixed(3)+')');g.addColorStop(.3,'rgba('+col+','+(.55*a).toFixed(3)+')');g.addColorStop(1,'rgba('+col+',0)');cx.fillStyle=g;cx.beginPath();cx.arc(lp[0],lp[1],rad*3.2,0,6.2832);cx.fill()}
-        else{var hh=h*k,dx=F[0]-R[0],dy=F[1]-R[1];cx.globalAlpha=a*(L.dim||(L.lift?.85:1));cx.fillStyle=c.c;cx.beginPath();cx.moveTo(R[0],R[1]);cx.lineTo(F[0],F[1]);cx.lineTo(F[0]-dx*.08,F[1]-dy*.08-hh*.55);
-          cx.lineTo(F[0]-dx*.25,F[1]-dy*.25-hh);cx.lineTo(R[0]+dx*.18,R[1]+dy*.18-hh);cx.lineTo(R[0],R[1]-hh*.55);cx.closePath();cx.fill();cx.globalAlpha=1}})});
+        var Fr=L.dir>0?F:R,Bk=L.dir>0?R:F,ux=Fr[0]-Bk[0],uy=Fr[1]-Bk[1],hh=h*k,rad=Math.max(.5,.2*t*k);
+        function P(u,v){return[Bk[0]+ux*u,Bk[1]+uy*u-hh*v]}   /* u: 0 back to 1 front; v: height in car heights */
+        function poly(q){cx.beginPath();cx.moveTo(q[0][0],q[0][1]);for(var n=1;n<q.length;n++)cx.lineTo(q[n][0],q[n][1]);cx.closePath();cx.fill()}
+        function glow(p,rr,col,al){var g=cx.createRadialGradient(p[0],p[1],0,p[0],p[1],rr*3.2);g.addColorStop(0,'rgba('+col+','+(.95*al).toFixed(3)+')');g.addColorStop(.3,'rgba('+col+','+(.55*al).toFixed(3)+')');g.addColorStop(1,'rgba('+col+',0)');cx.fillStyle=g;cx.beginPath();cx.arc(p[0],p[1],rr*3.2,0,6.2832);cx.fill()}
+        var near=L.dir>0?0:1;   /* the end facing the viewer: the back heading away, the front coming toward you */
+        if(dk){a*=L.dim?.8:1;
+          if(c.k==='bus'){cx.fillStyle='rgba(255,214,150,'+(.32*a).toFixed(3)+')';poly([P(.06,.78),P(.94,.78),P(.94,1.15),P(.06,1.15)])}
+          glow(P(near,.4),rad,L.dir>0?'255,92,72':'255,236,200',a);
+          if(c.k==='truck')glow(P(near,near?1.1:1.6),rad*.6,'255,180,70',a*.9)}
+        else{cx.globalAlpha=a*(L.dim||(L.lift?.85:1));
+          if(c.k==='truck'){cx.fillStyle=c.t;poly([P(0,0),P(.72,0),P(.72,1.6),P(0,1.6)]);cx.fillStyle=c.c;poly([P(.75,0),P(1,0),P(1,.75),P(.93,1.1),P(.75,1.1)])}
+          else if(c.k==='bus'){cx.fillStyle=c.t;poly([P(0,0),P(1,0),P(1,1.25),P(.97,1.4),P(0,1.4)]);cx.fillStyle='rgba(47,58,69,.75)';poly([P(.06,.78),P(.94,.78),P(.94,1.15),P(.06,1.15)])}
+          else{cx.fillStyle=c.c;poly([P(0,0),P(1,0),P(.92,.55),P(.75,1),P(.18,1),P(0,.55)])}
+          cx.globalAlpha=1}})});
       cx.restore()})}
   function step(ts){var dt=Math.min((ts-(last||ts))/1000,.1);last=ts;tick(dt);draw();raf=requestAnimationFrame(step)}
   function go(){var on=vis&&!document.hidden&&!(rm&&rm.matches)&&!!cv.getClientRects().length;if(on&&!raf){last=0;raf=requestAnimationFrame(step)}else if(!on&&raf){cancelAnimationFrame(raf);raf=0}if(!on)draw()}
-  for(var t=0;t<40;t+=.1)tick(.1);
+  for(var t=0;t<70;t+=.1)tick(.1);
   size();draw();
   if('ResizeObserver' in window)new ResizeObserver(function(){size();draw();go()}).observe(hero);else addEventListener('resize',function(){size();draw();go()});
   if('IntersectionObserver' in window)new IntersectionObserver(function(e){vis=e[0].isIntersecting;go()}).observe(hero);
