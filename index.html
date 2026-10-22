@@ -728,7 +728,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     echelon:[[0,0],[-22,20],[-44,40],[-66,60]],
     abreast:[[0,0],[-3,-30],[-3,30],[-6,-60],[-6,60]],
     single:[[0,0]]};
-  /* The team flies short sets of 1-3 passes, then disappears for 5-15 s, as if it were working another part of the city */
+  /* The team flies short sets of 1-3 passes, then disappears for 7-20 s, as if it were working another part of the city */
   var show={groups:[],wait:2,last:'',left:1+Math.floor(Math.random()*3)}, ghosts=[];
   function rnd(a,b){return a+Math.random()*(b-a)}
   function sstep(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
@@ -841,7 +841,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
       for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i),tr=g.trails[i],lp=tr[tr.length-1];if(!lp||Math.hypot(J.x-lp[0],J.y-lp[1])>4){tr.push([J.x,J.y]);if(tr.length>MAX)tr.shift()}}
       var out=g.d>g.path.len*.4&&!g.trails.some(function(t,i){var J=jetAt(g,i);return inView([J.x,J.y],60)});
       if(g.d>=g.path.len+900||out)g.done=true;else alive++});
-    if(!alive){show.groups.forEach(function(g){g.trails.forEach(function(t){ghosts.push(t)})});show.groups=[];if(--show.left>0)show.wait=rnd(2,4);else{show.left=1+Math.floor(Math.random()*3);show.wait=rnd(5,15)}}}
+    if(!alive){show.groups.forEach(function(g){g.trails.forEach(function(t){ghosts.push(t)})});show.groups=[];if(--show.left>0)show.wait=rnd(2,4);else{show.left=1+Math.floor(Math.random()*3);show.wait=rnd(7,20)}}}
   function step(ts){if(!running)return;var dt=Math.min((ts-(last||ts))/1000,.1);last=ts;tick(dt);draw();raf=requestAnimationFrame(step)}
   /* Visitor's on/off switch, remembered in this browser */
   var vis=true,off=false;try{off=localStorage.getItem('airshow')==='off'}catch(e){}
