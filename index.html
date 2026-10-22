@@ -794,9 +794,9 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     opposingSolos:{w:2,run:function(){var c=seal(),X=Math.random()<.45?[c.x,c.y]:[W*rnd(.25,.6),H*rnd(.3,.7)],s=Math.random()<.5?0:2;
       var g=[grp({shape:'single',path:route({from:s,to:opp(s),via:X}),v:V()*1.35,knife:true}),grp({shape:'single',path:route({from:opp(s),to:s,via:X}),v:V()*1.35,knife:true})];g.forEach(function(x){x.X=X});sync(g,X);return g}},
     deltaBreakout:{w:1,run:function(){return[grp({shape:'delta',path:route({bend:1}),v:V(),f:[[0,1],[.4,1],[.85,5],[1,6]]})]}},
-    splitRejoin:{w:1,join:true,run:function(){var c=seal(),first=!show.count,phone=W<600;
-      /* Phones: the portrait sits below the text, so the opening flies one straight diagonal instead of turning toward it (any bend there would make a wide-spread wing jet fall back) */
-      if(first&&phone){var Q=spline([[-O,H*.06],[W*.2,H*.06+(W*.2+O)/(W+2*O)*H*.74],[W*.8,H*.06+(W*.8+O)/(W+2*O)*H*.74],[W+O,H*.8]]),a=-1,b=0;for(var n=0;n<Q.p.length;n++)if(inView(Q.p[n],0)){if(a<0)a=Q.L[n];b=Q.L[n]}a/=Q.len;b/=Q.len;var s=b-a;
+    splitRejoin:{w:1,join:true,run:function(){var c=seal(),first=!show.count,stacked=c.x>W*.3&&c.x<W*.7;
+      /* Stacked layouts (phones either way up, upright tablets): the portrait sits below the text, so the opening flies one straight diagonal instead of turning toward it (any bend there would make a wide-spread wing jet fall back) */
+      if(first&&stacked){var Q=spline([[-O,H*.06],[W*.2,H*.06+(W*.2+O)/(W+2*O)*H*.74],[W*.8,H*.06+(W*.8+O)/(W+2*O)*H*.74],[W+O,H*.8]]),a=-1,b=0;for(var n=0;n<Q.p.length;n++)if(inView(Q.p[n],0)){if(a<0)a=Q.L[n];b=Q.L[n]}a/=Q.len;b/=Q.len;var s=b-a;
         return[grp({shape:'delta',path:Q,v:V()*.75,f:[[0,1],[a+.08*s,1],[a+.38*s,3],[a+.55*s,3],[a+.85*s,1],[1,1]]})]}
       var P=first?spline([[-O,H*.32],[W*.22,H*.26],[W*.48,H*.34],[c.x,c.y],[W+O,c.y+H*.12]]):route({bend:1});
       /* On first load the split happens in plain view over the left half and the jets rejoin before sliding behind the portrait */
