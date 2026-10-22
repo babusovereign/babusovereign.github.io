@@ -351,8 +351,6 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 .skytoggle .slash{stroke:currentColor;stroke-width:2.2;stroke-linecap:round;display:none}
 .skytoggle[aria-pressed="false"] .slash{display:inline}
 @media (prefers-reduced-motion: reduce){.skytoggle{display:none}}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .skytoggle{display:none}}
-:root[data-theme="dark"] .skytoggle{display:none}
 
 /* Light / dark switch beside "Say hello": shows a moon in light mode and a sun in dark mode; the choice is remembered in this browser */
 .themetoggle{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--rule);background:transparent;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:none;transition:border-color .2s,color .2s}
@@ -1024,8 +1022,8 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
   /* Visitor's on/off switch, remembered in this browser */
   var vis=true,off=false;try{off=localStorage.getItem('airshow')==='off'}catch(e){}
   var btn=wrap.querySelector('.skytoggle');function label(){if(!btn)return;btn.setAttribute('aria-pressed',off?'false':'true');var t=off?'Turn on the air show':'Turn off the air show';btn.setAttribute('aria-label',t);btn.title=t}
-  if(btn)btn.addEventListener('click',function(){off=!off;try{localStorage.setItem('airshow',off?'off':'on')}catch(e){}label();if(off){show.groups=[];ghosts.length=0;draw()}else{show.wait=.6;show.count=0;show.sinceJoin=0}go(!off&&vis&&!document.hidden)});label();
-  function go(on){if(still||(dark()?!fogOn():off))on=false;if(on===running)return;running=on;last=0;if(on)raf=requestAnimationFrame(step);else cancelAnimationFrame(raf)}
+  if(btn)btn.addEventListener('click',function(){off=!off;try{localStorage.setItem('airshow',off?'off':'on')}catch(e){}label();night.planes=[];night.wait=.3;night.max=0;night.fresh=0;if(off){show.groups=[];ghosts.length=0;draw()}else{show.wait=.6;show.count=0;show.sinceJoin=0}go(!off&&vis&&!document.hidden)});label();
+  function go(on){if(still||off||(dark()&&!fogOn()))on=false;if(on===running)return;running=on;last=0;if(on)raf=requestAnimationFrame(step);else cancelAnimationFrame(raf)}
   /* Reduce Motion switched on while the page is open: clear the sky and stop at once (and resume if it is switched off again) */
   if(rm&&rm.addEventListener)rm.addEventListener('change',function(){still=rm.matches;if(still){show.groups=[];ghosts.length=0;draw()}go(vis&&!document.hidden)});
   size();
