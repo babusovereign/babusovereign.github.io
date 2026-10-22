@@ -11,7 +11,7 @@ What it does:
      crumbs dropped. All colours and shapes are kept, so the detail stays.
   2. Salesforce Tower gets a clean tapered shaft and its rounded crown back.
   3. Day and night share the same shapes: the night is the day drawing recoloured
-     by CSS, and the night photo's lit windows are moved onto it (aligned on
+     by CSS, and the night skyline's lit windows (drawn by Fable from another agent's rendering) are moved onto it (aligned on
      Salesforce Tower and the Transamerica Pyramid) and clipped to the buildings.
   4. data-sky (top edge every 10 viewBox units) is recomputed for the jets.
 
@@ -137,7 +137,7 @@ crown = Polygon([(cx + 6.1 * math.cos(math.pi - i * math.pi / 24), shoulder - .3
 
 mass = unary_union([g for L in layers if not L['ink'] for g in L['g']])
 
-# ---- night windows: night photo lights moved onto the day drawing ----
+# ---- night windows: night lights moved onto the day drawing ----
 # anchors (traced tops): Salesforce 181.0 -> 196.5, Transamerica 430.5 -> 433.0
 ax = (433.0 - 196.5) / (430.5 - 181.0); bx = 196.5 - ax * 181.0
 inner = mass.buffer(-.25)
