@@ -271,6 +271,13 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 /* Hero homage to SkyWatch: simulated planes gliding behind the top section */
 .herosky{position:relative;overflow:hidden;isolation:isolate}
 .herosky .skycv{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;display:block}
+.skytoggle{position:absolute;right:clamp(12px,2.5vw,24px);bottom:clamp(12px,2vw,20px);z-index:2;width:38px;height:38px;border-radius:50%;border:1.5px solid var(--rule);background:color-mix(in srgb,var(--paper) 80%,transparent);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:color .2s,border-color .2s}
+.skytoggle:hover{color:var(--ink);border-color:var(--muted)}
+.skytoggle:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.skytoggle svg{width:18px;height:18px;fill:currentColor;overflow:visible}
+.skytoggle .slash{stroke:currentColor;stroke-width:2.2;stroke-linecap:round;display:none}
+.skytoggle[aria-pressed="false"] .slash{display:inline}
+@media (prefers-reduced-motion: reduce){.skytoggle{display:none}}
 </style>
 </head>
 <body>
@@ -288,6 +295,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 
 <div class="herosky">
 <canvas class="skycv" aria-hidden="true"></canvas>
+<button class="skytoggle" type="button" aria-pressed="true" aria-label="Turn off the air show" title="Turn off the air show"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/><line class="slash" x1="3" y1="3" x2="21" y2="21"/></svg></button>
 <div class="shell">
   <header class="hero" id="top">
     <div>
@@ -730,12 +738,16 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
   function size(){var r=wrap.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);W=r.width;H=r.height;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);if(!running)draw()}
   /* ---- paths ---- */
   function spline(pts){var out=[];for(var i=0;i<pts.length-1;i++){var p0=pts[Math.max(i-1,0)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(i+2,pts.length-1)];
-      for(var j=0;j<20;j++){var t=j/20,t2=t*t,t3=t2*t;out.push([.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3),.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)])}}
+      for(var j=0;j<40;j++){var t=j/40,t2=t*t,t3=t2*t;out.push([.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3),.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)])}}
     out.push(pts[pts.length-1]);var L=[0];for(var k=1;k<out.length;k++)L.push(L[k-1]+Math.hypot(out[k][0]-out[k-1][0],out[k][1]-out[k-1][1]));return{p:out,L:L,len:L[L.length-1]}}
   function smooth(path){var P=path.p,L=path.L,prev=null,lastD=0;for(var i=1;i<P.length;i++){if(L[i]-lastD<24)continue;var a=P[i-1],b=P[i];var h=Math.atan2(b[1]-a[1],b[0]-a[0]);
-      if(prev!==null){var d=Math.abs(Math.atan2(Math.sin(h-prev),Math.cos(h-prev)));if(d>.28)return false}prev=h;lastD=L[i]}return true}
-  function at(path,d){var L=path.L,lo=0,hi=L.length-1;if(d<=0)d=0;if(d>=path.len)d=path.len-.01;while(hi-lo>1){var m=(lo+hi)>>1;if(L[m]<=d)lo=m;else hi=m}
-    var a=path.p[lo],b=path.p[hi],f=(d-L[lo])/((L[hi]-L[lo])||1);return{x:a[0]+(b[0]-a[0])*f,y:a[1]+(b[1]-a[1])*f,h:Math.atan2(b[1]-a[1],b[0]-a[0])}}
+      if(prev!==null){var d=Math.abs(Math.atan2(Math.sin(h-prev),Math.cos(h-prev)));if(d>.2)return false}prev=h;lastD=L[i]}return true}
+  function at(path,d){var P=path.p,n=P.length;
+    if(d<0){var a0=P[0],b0=P[Math.min(4,n-1)],l0=Math.hypot(b0[0]-a0[0],b0[1]-a0[1])||1;return{x:a0[0]+(b0[0]-a0[0])/l0*d,y:a0[1]+(b0[1]-a0[1])/l0*d}}
+    if(d>path.len){var a1=P[Math.max(0,n-5)],b1=P[n-1],l1=Math.hypot(b1[0]-a1[0],b1[1]-a1[1])||1,e=d-path.len;return{x:b1[0]+(b1[0]-a1[0])/l1*e,y:b1[1]+(b1[1]-a1[1])/l1*e}}
+    var L=path.L,lo=0,hi=L.length-1;while(hi-lo>1){var m=(lo+hi)>>1;if(L[m]<=d)lo=m;else hi=m}
+    var a=path.p[lo],b=path.p[hi],f=(d-L[lo])/((L[hi]-L[lo])||1);return{x:a[0]+(b[0]-a[0])*f,y:a[1]+(b[1]-a[1])*f}}
+  function pose(path,d){var q=at(path,d),A=at(path,d-18),B=at(path,d+18);q.h=Math.atan2(B.y-A.y,B.x-A.x);return q}
   function distTo(path,X){var best=0,bd=1e9;for(var i=0;i<path.p.length;i++){var d=Math.hypot(path.p[i][0]-X[0],path.p[i][1]-X[1]);if(d<bd){bd=d;best=i}}return path.L[best]}
   var O=230;
   function edge(side){return side===0?[-O,H*rnd(.12,.88)]:side===1?[W+O,H*rnd(.12,.88)]:side===2?[W*rnd(.08,.92),-O]:[W*rnd(.08,.92),H+O]}
@@ -764,8 +776,8 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
   function sync(groups,X){var ds=groups.map(function(g){return (distTo(g.path,X)-g.d)/g.v}),mx=Math.max.apply(null,ds),gap=rnd(.55,.8);groups.forEach(function(g,i){g.delay=mx-ds[i]+i*gap})}
   /* Deconfliction: fly the whole act ahead of time and reject it if any two jets would ever touch */
   function safe(groups){var k=W<600?1:1.4,min=30*k,st=groups.map(function(g){return{d:g.d,delay:g.delay}}),dt=.04;
-    for(var t=0;t<60;t+=dt){var pts=[],alive=0;groups.forEach(function(g,gi){var q=st[gi];if(q.delay>0){q.delay-=dt;alive++;return}q.d+=g.v*dt;if(q.d>=g.path.len)return;alive++;var keep=g.d;g.d=q.d;for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i);J.g=gi;J.i=i;pts.push(J)}g.d=keep});
-      for(var a=0;a<pts.length;a++)for(var b=a+1;b<pts.length;b++){var lim=pts[a].g===pts[b].g?min:min*1.6;if(Math.hypot(pts[a].x-pts[b].x,pts[a].y-pts[b].y)<lim)return false}
+    for(var t=0;t<60;t+=dt){var pts=[],alive=0;groups.forEach(function(g,gi){var q=st[gi];if(q.delay>0){q.delay-=dt;alive++;return}q.d+=g.v*dt;if(q.d>=g.path.len+900)return;alive++;var keep=g.d;g.d=q.d;for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i);J.g=gi;J.i=i;pts.push(J)}g.d=keep});
+      for(var a=0;a<pts.length;a++)for(var b=a+1;b<pts.length;b++){var lim=pts[a].g===pts[b].g?min*.75:min*1.6;if(Math.hypot(pts[a].x-pts[b].x,pts[a].y-pts[b].y)<lim)return false}
       if(!alive)break}return true}
   function V(){return W<600?125:170}
   function rollWin(){var u=rnd(.3,.55);return[u,u+rnd(.16,.24)]}
@@ -778,38 +790,47 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     burnerTurn:{w:2,run:function(){return[grp({shape:'diamond',path:sweep(),v:V()*1.05})]}},
     opposingSolos:{w:2,run:function(){var c=seal(),X=Math.random()<.45?[c.x,c.y]:[W*rnd(.25,.6),H*rnd(.3,.7)],s=Math.random()<.5?0:2;
       var g=[grp({shape:'single',path:route({from:s,to:opp(s),via:X}),v:V()*1.35,knife:true}),grp({shape:'single',path:route({from:opp(s),to:s,via:X}),v:V()*1.35,knife:true})];g.forEach(function(x){x.X=X});sync(g,X);return g}},
-    deltaBreakout:{w:1,run:function(){return[grp({shape:'delta',path:route({bend:1}),v:V(),f:[[0,1],[.45,1],[.85,6],[1,7]]})]}},
-    joinUp:{w:1,run:function(){return[grp({shape:'delta',path:route({bend:1}),v:V(),f:[[0,5.5],[.42,1],[1,1]]})]}},
+    deltaBreakout:{w:1,run:function(){return[grp({shape:'delta',path:route({bend:1}),v:V(),f:[[0,1],[.4,1],[.85,5],[1,6]]})]}},
+    splitRejoin:{w:1,join:true,run:function(){var c=seal(),first=!show.count,P=first?spline([[-O,H*.32],[W*.22,H*.26],[W*.48,H*.34],[c.x,c.y],[W+O,c.y+H*.12]]):route({bend:1});
+      /* On first load the split happens in plain view over the left half and the jets rejoin before sliding behind the portrait */
+      return[grp({shape:'delta',path:P,v:V()*(first?.85:1),f:first?[[0,1],[.12,1],[.36,4],[.5,4],[.72,1],[1,1]]:[[0,1],[.15,1],[.42,4],[.7,1],[1,1]]})]}},
+    joinUp:{w:1,join:true,run:function(){return[grp({shape:'delta',path:route({bend:1}),v:V(),f:[[0,5],[.5,1],[1,1]]})]}},
     crossCenter:{w:1,run:function(){var X=[W*rnd(.3,.6),H*rnd(.35,.65)],sides=[0,1,2,3],g=sides.map(function(s){return grp({shape:'single',path:route({from:s,to:s<2?opp(s):(s===2?3:2),via:X}),v:V()*1.2})});sync(g,X);return g}}
   };
-  function nextAct(){var names=Object.keys(ACTS).filter(function(n){return n!==show.last}),tot=0;names.forEach(function(n){tot+=ACTS[n].w});var r=Math.random()*tot,pick=names[0];
+  /* First pass on every page load is a split-and-rejoin; after that, a join-up or split-and-rejoin is guaranteed at least once in every 4 passes */
+  function nextAct(){var names=Object.keys(ACTS).filter(function(n){return n!==show.last}),tot=0;
+    if(!show.count)names=['splitRejoin'];else if(show.sinceJoin>=3)names=names.filter(function(n){return ACTS[n].join});names.forEach(function(n){tot+=ACTS[n].w});var r=Math.random()*tot,pick=names[0];
     for(var i=0;i<names.length;i++){r-=ACTS[names[i]].w;if(r<=0){pick=names[i];break}}
-    for(var tries=0;tries<12;tries++){var g=ACTS[pick].run();if(safe(g)){show.last=pick;show.groups=g;return}}
-    show.last='deltaPass';show.groups=[grp({shape:'delta',path:route(),v:V()})]}
+    for(var tries=0;tries<12;tries++){var g=ACTS[pick].run();if(safe(g)){show.last=pick;show.groups=g;show.count=(show.count||0)+1;show.sinceJoin=ACTS[pick].join?0:(show.sinceJoin||0)+1;return}}
+    show.last='deltaPass';show.groups=[grp({shape:'delta',path:route(),v:V()})];show.count=(show.count||0)+1;show.sinceJoin=(show.sinceJoin||0)+1}
   /* ---- per-jet motion ---- */
   function spreadOf(g,u){var f=g.f;if(u<=f[0][0])return f[0][1];for(var i=1;i<f.length;i++)if(u<=f[i][0]){var a=f[i-1],b=f[i];return a[1]+(b[1]-a[1])*sstep((u-a[0])/((b[0]-a[0])||1))}return f[f.length-1][1]}
-  function jetAt(g,i){var u=g.d/g.path.len,q=at(g.path,g.d),k=(W<600?1:1.4)*spreadOf(g,u),A=SH[g.shape][i],B=SH[g.s2][i]||A,t=sstep((u-g.m+.12)/.24),ox=(A[0]+(B[0]-A[0])*t)*k,oy=(A[1]+(B[1]-A[1])*t)*k,c=Math.cos(q.h),sn=Math.sin(q.h),bank=1;
+  /* Splits and join-ups mostly widen the formation sideways (fore/aft spacing grows only a little), so jets drift apart in gentle arcs instead of swinging */
+  function jetAt(g,i){var u=g.d/g.path.len,b0=W<600?1:1.4,sp=spreadOf(g,u),A=SH[g.shape][i],B=SH[g.s2][i]||A,t=sstep((u-g.m+.12)/.24),ox=(A[0]+(B[0]-A[0])*t)*b0*(1+(sp-1)*.3),oy=(A[1]+(B[1]-A[1])*t)*b0*sp,q=pose(g.path,g.d+ox),bank=1;
     if(g.roll){var r=(u-g.roll[0])/(g.roll[1]-g.roll[0]);if(r>0&&r<1)bank=Math.cos(2*Math.PI*sstep(r))}
-    if(g.knife&&g.X){var dd=Math.hypot(q.x-g.X[0],q.y-g.X[1]);bank=1-.85*Math.max(0,1-dd/160)}
-    return{x:q.x+ox*c-oy*sn,y:q.y+ox*sn+oy*c,h:q.h,b:bank}}
+    if(g.knife&&g.X){var dd=Math.hypot(q.x-g.X[0],q.y-g.X[1]);bank=1-.85*sstep(1-dd/160)}
+    return{x:q.x-oy*Math.sin(q.h),y:q.y+oy*Math.cos(q.h),h:q.h,b:bank}}
   function trailDraw(tr,smoke,dk){var n=tr.length;for(var j=1;j<n;j++){ctx.strokeStyle='rgba('+smoke+','+((dk?.5:.42)*(j/n)).toFixed(3)+')';ctx.beginPath();ctx.moveTo(tr[j-1][0],tr[j-1][1]);ctx.lineTo(tr[j][0],tr[j][1]);ctx.stroke()}}
   function draw(){ctx.clearRect(0,0,W,H);var dk=dark(),k=W<600?1:1.4,smoke=dk?'236,240,232':'120,132,124';ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=3*k;
     ghosts.forEach(function(tr){trailDraw(tr,smoke,dk)});
     show.groups.forEach(function(g){g.trails.forEach(function(tr){trailDraw(tr,smoke,dk)})});
     show.groups.forEach(function(g){if(g.done||g.delay>0)return;for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i);ctx.save();ctx.translate(J.x,J.y);ctx.rotate(J.h);ctx.scale(k,k*Math.max(.12,Math.abs(J.b)));
       ctx.globalAlpha=.92;ctx.fillStyle=dk?'#4a72c9':'#1d3a78';ctx.fill(jet);ctx.strokeStyle='#e8b10e';ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(-11,0);ctx.moveTo(-3.2,-8.2);ctx.lineTo(2.6,-2.4);ctx.moveTo(-3.2,8.2);ctx.lineTo(2.6,2.4);ctx.stroke();ctx.restore()}})}
-  function tick(dt){var MAX=90;
-    for(var gi=ghosts.length-1;gi>=0;gi--){ghosts[gi].splice(0,Math.max(1,Math.round(dt*70)));if(!ghosts[gi].length)ghosts.splice(gi,1)}
+  function tick(dt){var MAX=170;
+    for(var gi=ghosts.length-1;gi>=0;gi--){ghosts[gi].splice(0,Math.max(1,Math.round(dt*120)));if(!ghosts[gi].length)ghosts.splice(gi,1)}
     if(!show.groups.length){show.wait-=dt;if(show.wait<=0)nextAct();return}
     var alive=0;show.groups.forEach(function(g){if(g.done)return;if(g.delay>0){g.delay-=dt;alive++;return}g.d+=g.v*dt;
-      for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i),tr=g.trails[i],lp=tr[tr.length-1];if(!lp||Math.hypot(J.x-lp[0],J.y-lp[1])>7){tr.push([J.x,J.y]);if(tr.length>MAX)tr.shift()}}
+      for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i),tr=g.trails[i],lp=tr[tr.length-1];if(!lp||Math.hypot(J.x-lp[0],J.y-lp[1])>4){tr.push([J.x,J.y]);if(tr.length>MAX)tr.shift()}}
       var out=g.d>g.path.len*.4&&!g.trails.some(function(t,i){var J=jetAt(g,i);return inView([J.x,J.y],60)});
-      if(g.d>=g.path.len||out)g.done=true;else alive++});
+      if(g.d>=g.path.len+900||out)g.done=true;else alive++});
     if(!alive){show.groups.forEach(function(g){g.trails.forEach(function(t){ghosts.push(t)})});show.groups=[];if(--show.left>0)show.wait=rnd(2,4);else{show.left=1+Math.floor(Math.random()*3);show.wait=rnd(15,45)}}}
   function step(ts){if(!running)return;var dt=Math.min((ts-(last||ts))/1000,.1);last=ts;tick(dt);draw();raf=requestAnimationFrame(step)}
-  function go(on){if(still)on=false;if(on===running)return;running=on;last=0;if(on)raf=requestAnimationFrame(step);else cancelAnimationFrame(raf)}
+  /* Visitor's on/off switch, remembered in this browser */
+  var vis=true,off=false;try{off=localStorage.getItem('airshow')==='off'}catch(e){}
+  var btn=wrap.querySelector('.skytoggle');function label(){if(!btn)return;btn.setAttribute('aria-pressed',off?'false':'true');var t=off?'Turn on the air show':'Turn off the air show';btn.setAttribute('aria-label',t);btn.title=t}
+  if(btn)btn.addEventListener('click',function(){off=!off;try{localStorage.setItem('airshow',off?'off':'on')}catch(e){}label();if(off){show.groups=[];ghosts.length=0;draw()}else{show.wait=.6;show.count=0;show.sinceJoin=0}go(!off&&vis&&!document.hidden)});label();
+  function go(on){if(still||off)on=false;if(on===running)return;running=on;last=0;if(on)raf=requestAnimationFrame(step);else cancelAnimationFrame(raf)}
   size();
-  var vis=true;
   if('IntersectionObserver' in window)new IntersectionObserver(function(e){vis=e[0].isIntersecting;go(vis&&!document.hidden)}).observe(wrap);
   document.addEventListener('visibilitychange',function(){go(vis&&!document.hidden)});
   if('ResizeObserver' in window)new ResizeObserver(size).observe(wrap);else window.addEventListener('resize',size);
