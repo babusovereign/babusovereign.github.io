@@ -840,7 +840,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
   function dark(){var t=document.documentElement.getAttribute('data-theme');return t?t==='dark':!!(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)}
   function seal(){var e=document.querySelector('.hero .portraitseal'),w=wrap.getBoundingClientRect();
     if(!e)return{x:W*.78,y:H*.5,r:Math.min(W,H)*.2};var r=e.getBoundingClientRect();return{x:r.left-w.left+r.width/2,y:r.top-w.top+r.height/2,r:r.width/2}}
-  function size(){var r=wrap.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);W=r.width;H=r.height;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);obstacles();if(!running)draw()}
+  function size(){var r=wrap.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);W=r.width;H=r.height;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);obstacles();if(dark()&&!fogOn())night.planes=[];if(!running)draw();go(vis&&!document.hidden)}
   /* Bridges are obstacles: each SVG carries its skyline (top edge every 10 viewBox units); a pass is rejected if any jet would touch it */
   /* The bottom of the top section is the sea: jets may fly through the fog, but never enter the sky from it */
   var SEA=1e9,FOG=1e9,OBS=[];function obstacles(){OBS=[];var wr=wrap.getBoundingClientRect(),fg=document.querySelector('.herosky .fog');
@@ -948,6 +948,37 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     for(var i=0;i<names.length;i++){r-=ACTS[names[i]].w;if(r<=0){pick=names[i];break}}
     for(var tries=0;tries<12;tries++){var g=ACTS[pick].run();if(safe(g)){show.last=pick;show.groups=g;paint(g);show.count=(show.count||0)+1;show.sinceJoin=ACTS[pick].join?0:(show.sinceJoin||0)+1;return}}
     for(var tr=0;tr<12;tr++){var g2=[grp({shape:'delta',path:route(),v:V()})];if(safe(g2)){show.last='deltaPass';show.groups=g2;paint(g2);show.count=(show.count||0)+1;show.sinceJoin=(show.sinceJoin||0)+1;return}}show.wait=1}
+  /* ---- night flights (dark mode, only where the sky shows) ----
+     1-3 small airliners crossing slowly, each in its own height band, straight or gently curving; a red beacon blinks about once a second and a faint white strobe flashes at the wingtips.
+     Same pre-flight check as the jets: every candidate is flown ahead of time and rejected if it would enter the fog, touch a bridge or come near another airliner */
+  /* Side profile, nose to the right: belly always toward the ground and tail fin up. Flying left mirrors it (never rotates it upside down), and it only pitches a few degrees on gentle climbs and descents; airliners never bank or roll like the jets */
+  var liner=new Path2D('M14 0.4Q14 -1.4 11 -1.6L-9 -1.6L-12.5 -7.5L-14.5 -7.5L-13.5 -1.2L-14 0L-13 1.2L-8 1.6L10 1.6Q13.6 1.6 14 0.4ZM3 0.8L-3 4.5L-5.6 4.5L-2 0.8ZM3.4 2.2L-0.8 2.2L-0.8 3.6L3.4 3.6ZM-10 0.2L-13.8 2.2L-14.8 2.2L-12.6 0Z');
+  var night={planes:[],wait:.4,max:1+Math.floor(Math.random()*3),t:0,fresh:true};
+  function nightTop(){var wr=wrap.getBoundingClientRect(),fg=document.querySelector('.herosky .fog');if(!fg||!fg.getClientRects().length)return H*.5;return fg.getBoundingClientRect().top-wr.top}
+  function nightPos(pl,d){return pose(pl.path,d)}
+  function nightSpawn(){var NF=nightTop(),pad=18,top=H*.06,bot=NF-pad-8;if(bot-top<90)return false;var bh=(bot-top)/3,used=night.planes.map(function(p){return p.band}),free=[0,1,2].filter(function(b){return used.indexOf(b)<0});
+    for(var tries=0;tries<24&&free.length;tries++){var b=free[Math.floor(Math.random()*free.length)],lo=top+b*bh+bh*.2,hi=top+(b+1)*bh-bh*.2,dir=Math.random()<.5?1:-1,
+        A=[dir>0?-70:W+70,rnd(lo,hi)],B=[dir>0?W+70:-70,rnd(lo,hi)],pts=[A];
+      if(Math.random()<.5)pts.push([W*rnd(.35,.65),Math.max(lo,Math.min(hi,(A[1]+B[1])/2+rnd(-1,1)*bh*.3))]);pts.push(B);
+      var P=spline(pts);if(!smooth(P))continue;var ok=true;
+      for(var i=0;i<P.p.length&&ok;i++){var q=P.p[i];if(q[1]>NF-pad||q[1]<top-4||blocked(q[0],q[1],pad))ok=false}if(!ok)continue;
+      var pl={path:P,v:rnd(22,34)*(W<900?.8:1),band:b,ph:Math.random(),sp:Math.random()*1.6,k:[.72,.84,.96][b]*(W<900?.85:1)};
+      pl.d=night.fresh?P.len*rnd(.15,.55):0;
+      if(nightClear(pl)){night.planes.push(pl);night.fresh=false;return true}}
+    return false}
+  /* fly the newcomer and everyone already up for two minutes ahead: no two airliners may ever come within 48 px, and each keeps its own height band */
+  function nightClear(c){var all=night.planes.concat([c]),ds=all.map(function(p){return p.d});
+    for(var t=0;t<150;t+=.25){var pos=[];all.forEach(function(p,i){ds[i]+=p.v*.25;if(ds[i]<p.path.len)pos.push(nightPos(p,ds[i]))});
+      for(var a=0;a<pos.length;a++)for(var b=a+1;b<pos.length;b++)if(Math.hypot(pos[a].x-pos[b].x,pos[a].y-pos[b].y)<48)return false;if(pos.length<2&&ds[ds.length-1]>=c.path.len)break}
+    return true}
+  function nightTick(dt){night.t+=dt;for(var i=night.planes.length-1;i>=0;i--){var p=night.planes[i];p.d+=p.v*dt;if(p.d>p.path.len)night.planes.splice(i,1)}
+    night.wait-=dt;if(night.wait<=0&&night.planes.length<night.max){night.wait=nightSpawn()?rnd(4,11):1.5;if(Math.random()<.3)night.max=1+Math.floor(Math.random()*3)}}
+  function glow(x,y,r,c,a){var g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba('+c+','+a+')');g.addColorStop(1,'rgba('+c+',0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,2*Math.PI);ctx.fill()}
+  function nightDraw(){if(!fogOn())return;night.planes.forEach(function(p){var q=nightPos(p,p.d),fx=Math.cos(q.h)<0?-1:1,pt=Math.max(-.12,Math.min(.12,Math.atan2(Math.sin(q.h),Math.abs(Math.cos(q.h))))),c=Math.cos(pt),s=Math.sin(pt),k=p.k;
+      ctx.save();ctx.translate(q.x,q.y);ctx.scale(fx*k,k);ctx.rotate(pt);ctx.globalAlpha=.9;ctx.fillStyle='#3d4d63';ctx.fill(liner);ctx.globalAlpha=1;ctx.restore();
+      function at2(ax,ay){return[q.x+fx*(ax*c-ay*s)*k,q.y+(ax*s+ay*c)*k]}
+      if((night.t+p.ph)%1<.14){var r=at2(1,-1.7);glow(r[0],r[1],6*k,'255,60,48',.95);glow(r[0],r[1],1.6*k,'255,170,160',1)}
+      var u=(night.t+p.sp)%1.6;if(u<.06||(u>.16&&u<.22)){[at2(-4.4,4.5),at2(-14.4,0)].forEach(function(w){glow(w[0],w[1],4*k,'255,255,255',.45)})}})}
   /* ---- per-jet motion ---- */
   function spreadOf(g,u){var f=g.f;if(u<=f[0][0])return f[0][1];for(var i=1;i<f.length;i++)if(u<=f[i][0]){var a=f[i-1],b=f[i];return a[1]+(b[1]-a[1])*sstep((u-a[0])/((b[0]-a[0])||1))}return f[f.length-1][1]}
   /* Splits and join-ups mostly widen the formation sideways (fore/aft spacing grows only a little), so jets drift apart in gentle arcs instead of swinging */
@@ -960,7 +991,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
   function trailDraw(tr,smoke,dk){var n=tr.length,c=tr.c?USA[tr.c][dk?1:0]:smoke,a=tr.c?(dk?.6:.6):(dk?.5:.42),lw=ctx.lineWidth;
     if(tr.c==='w'&&!dk){ctx.lineWidth=lw*1.7;for(var j=1;j<n;j++){ctx.strokeStyle='rgba(120,132,124,'+(.22*(j/n)).toFixed(3)+')';ctx.beginPath();ctx.moveTo(tr[j-1][0],tr[j-1][1]);ctx.lineTo(tr[j][0],tr[j][1]);ctx.stroke()}ctx.lineWidth=lw;a=.95}
     for(var j=1;j<n;j++){ctx.strokeStyle='rgba('+c+','+(a*(j/n)).toFixed(3)+')';ctx.beginPath();ctx.moveTo(tr[j-1][0],tr[j-1][1]);ctx.lineTo(tr[j][0],tr[j][1]);ctx.stroke()}}
-  function draw(){ctx.clearRect(0,0,W,H);var dk=dark(),k=W<600?1:1.4,smoke=dk?'236,240,232':'120,132,124';ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=3*k;
+  function draw(){ctx.clearRect(0,0,W,H);if(dark()){nightDraw();return}var dk=dark(),k=W<600?1:1.4,smoke=dk?'236,240,232':'120,132,124';ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=3*k;
     ghosts.forEach(function(tr){trailDraw(tr,smoke,dk)});
     show.groups.forEach(function(g){g.trails.forEach(function(tr){trailDraw(tr,smoke,dk)})});
     show.groups.forEach(function(g){if(g.done||g.delay>0)return;for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i);ctx.save();ctx.translate(J.x,J.y);ctx.rotate(J.h);ctx.scale(k,k*Math.max(.12,Math.abs(J.b)));
@@ -973,20 +1004,20 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
       var out=g.d>g.path.len*.4&&!g.trails.some(function(t,i){var J=jetAt(g,i);return inView([J.x,J.y],60)});
       if(g.d>=g.path.len+900||out)g.done=true;else alive++});
     if(!alive){show.groups.forEach(function(g){g.trails.forEach(function(t){ghosts.push(t)})});show.groups=[];if(--show.left>0)show.wait=rnd(2,4);else{show.left=1+Math.floor(Math.random()*3);show.wait=rnd(7,20)}}}
-  function step(ts){if(!running)return;var dt=Math.min((ts-(last||ts))/1000,.1);last=ts;tick(dt);draw();raf=requestAnimationFrame(step)}
+  function step(ts){if(!running)return;var dt=Math.min((ts-(last||ts))/1000,.1);last=ts;if(dark())nightTick(dt);else tick(dt);draw();raf=requestAnimationFrame(step)}
   /* Visitor's on/off switch, remembered in this browser */
   var vis=true,off=false;try{off=localStorage.getItem('airshow')==='off'}catch(e){}
   var btn=wrap.querySelector('.skytoggle');function label(){if(!btn)return;btn.setAttribute('aria-pressed',off?'false':'true');var t=off?'Turn on the air show':'Turn off the air show';btn.setAttribute('aria-label',t);btn.title=t}
   if(btn)btn.addEventListener('click',function(){off=!off;try{localStorage.setItem('airshow',off?'off':'on')}catch(e){}label();if(off){show.groups=[];ghosts.length=0;draw()}else{show.wait=.6;show.count=0;show.sinceJoin=0}go(!off&&vis&&!document.hidden)});label();
-  function go(on){if(still||off||dark())on=false;if(on===running)return;running=on;last=0;if(on)raf=requestAnimationFrame(step);else cancelAnimationFrame(raf)}
+  function go(on){if(still||(dark()?!fogOn():off))on=false;if(on===running)return;running=on;last=0;if(on)raf=requestAnimationFrame(step);else cancelAnimationFrame(raf)}
   /* Reduce Motion switched on while the page is open: clear the sky and stop at once (and resume if it is switched off again) */
   if(rm&&rm.addEventListener)rm.addEventListener('change',function(){still=rm.matches;if(still){show.groups=[];ghosts.length=0;draw()}go(vis&&!document.hidden)});
   size();
   if('IntersectionObserver' in window)new IntersectionObserver(function(e){vis=e[0].isIntersecting;go(vis&&!document.hidden)}).observe(wrap);
   document.addEventListener('visibilitychange',function(){go(vis&&!document.hidden)});
   if('ResizeObserver' in window)new ResizeObserver(size).observe(wrap);else window.addEventListener('resize',size);
-  /* Dark mode is a quiet night sky: no air show (it resumes when the page goes back to light) */
-  function onTheme(){if(dark()){show.groups=[];ghosts.length=0}draw();go(vis&&!document.hidden)}
+  /* Dark mode swaps the air show for quiet night flights (the air show resumes when the page goes back to light) */
+  function onTheme(){if(dark()){show.groups=[];ghosts.length=0}else{night.planes=[];night.wait=.4;night.fresh=true}draw();go(vis&&!document.hidden)}
   if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',onTheme);
   new MutationObserver(onTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
   go(!document.hidden);
