@@ -1,8 +1,4 @@
-"""Day skyline, detailed trace of the rendered reference (the other agent's own rendering, so no licence to carry).
-The city is cut from the sky with a flood fill, sky-coloured rims along the roofline are dropped, the facades are
-quantised into K flat colours with only light smoothing and traced at a fine tolerance, and an ink layer traced from
-the building edges puts the window grids, setbacks and tower edges back. viewBox 600x230, ground at 230.
-Writes skyline_day.html (markup with inline fills) and prints the size."""
+"""Writes skyline_day.html (markup with inline fills) and prints the size."""
 import cv2, numpy as np
 SRC='/root/.claude/uploads/9f38b2cf-1489-5540-bb84-653f7bd5277e/2bf84454-image.png'
 OUT='/tmp/claude-0/-home-claude/9f38b2cf-1489-5540-bb84-653f7bd5277e/scratchpad'

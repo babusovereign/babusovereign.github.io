@@ -1,20 +1,6 @@
 #!/usr/bin/env python3
 """Smooth the traced downtown skyline and merge day + night into ONE aligned drawing.
 
-Inputs (kept in this folder so the build is repeatable):
-  skyline_src_day.html   - the detailed day trace (14 flat colours + ink layer)
-  skyline_src_night.html - the night trace (its lit windows and crowns are reused)
-
-What it does:
-  1. Every traced shape is cleaned like a vector drawing: pixel stair-steps removed
-     (Douglas-Peucker), near-vertical/near-horizontal edges snapped straight,
-     crumbs dropped. All colours and shapes are kept, so the detail stays.
-  2. Salesforce Tower gets a clean tapered shaft and its rounded crown back.
-  3. Day and night share the same shapes: the night is the day drawing recoloured
-     by CSS, and the night skyline's lit windows (drawn by Fable from another agent's rendering) are moved onto it (aligned on
-     Salesforce Tower and the Transamerica Pyramid) and clipped to the buildings.
-  4. data-sky (top edge every 10 viewBox units) is recomputed for the jets.
-
 Run:  python3 .github/skywatch/skyline_smooth.py > /tmp/skyline.html   (pip install shapely numpy)
 """
 import math, os, re, sys

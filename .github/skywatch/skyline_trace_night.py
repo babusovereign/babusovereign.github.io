@@ -1,7 +1,4 @@
-"""Night skyline drawn by Fable from a rendering made by another agent (not a photograph; earlier notes here wrongly called it a Commons photo): the Bay Bridge tower at the left is cropped
-out; the buildings are cut from the sky with a flood fill, the dark masses quantised into a few flat night colours, and
-the lights traced from the bright pixels in their own colours (amber, white, blue) so the window pattern is the real one.
-viewBox 600x230, ground at 230. Writes skyline_night.html with inline fills (night has no theme variants)."""
+"""Writes skyline_night.html with inline fills (night has no theme variants)."""
 import cv2, numpy as np
 SRC='/root/.claude/uploads/9f38b2cf-1489-5540-bb84-653f7bd5277e/ee1c13db-image.png'
 OUT='/tmp/claude-0/-home-claude/9f38b2cf-1489-5540-bb84-653f7bd5277e/scratchpad'
