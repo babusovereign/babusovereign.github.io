@@ -303,7 +303,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #play{--paper:#0f1d17; --cream:#16261f; --ink:#e4e9db; --muted:#9aab9a; --rule:#2e4236; --green:#5fbf94; --gold:#d3af5c; --goldtext:#d3af5c; --seal:#e08a74; --sage:#24352b; --teal:#56c8ba; --pilltext:#0f1d17; --pullbtntext:#0f1d17; --r1:#5fbf94; --r2:#d3af5c; --r3:#e08a74; --r4:#86a7d8; --bg:#0f1d17; --card:#16261f; --photobg:#24352b}}
 :root[data-theme="dark"] #play{--paper:#0f1d17; --cream:#16261f; --ink:#e4e9db; --muted:#9aab9a; --rule:#2e4236; --green:#5fbf94; --gold:#d3af5c; --goldtext:#d3af5c; --seal:#e08a74; --sage:#24352b; --teal:#56c8ba; --pilltext:#0f1d17; --pullbtntext:#0f1d17; --r1:#5fbf94; --r2:#d3af5c; --r3:#e08a74; --r4:#86a7d8; --bg:#0f1d17; --card:#16261f; --photobg:#24352b}
 #sky{position:relative;overflow:hidden;isolation:isolate}
-#sky .skytraffic{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;-webkit-mask-image:linear-gradient(to right,#000 0,rgba(0,0,0,.32) 30%,rgba(0,0,0,.32) 70%,#000 100%);mask-image:linear-gradient(to right,#000 0,rgba(0,0,0,.32) 30%,rgba(0,0,0,.32) 70%,#000 100%)}
+#sky .skytraffic{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;-webkit-mask-image:linear-gradient(to right,#000 0,rgba(0,0,0,.18) 30%,rgba(0,0,0,.18) 70%,#000 100%);mask-image:linear-gradient(to right,#000 0,rgba(0,0,0,.18) 30%,rgba(0,0,0,.18) 70%,#000 100%)}
 </style>
 </head>
 <body>
@@ -634,7 +634,7 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 <script>
 /* SkyWatch band: simulated traffic with trails. Pre-flight check: no two planes ever closer than 48 px. The home page's air-show "off" setting hides them. */
 (function(){
-  var sec=document.getElementById('sky');if(!sec||!sec.getContext&&!document.createElement('canvas').getContext)return;
+  var sec=document.getElementById('sky');if(!sec||!document.createElement('canvas').getContext)return;
   var cv=document.createElement('canvas');cv.className='skytraffic';cv.setAttribute('aria-hidden','true');sec.insertBefore(cv,sec.firstChild);
   var cx=cv.getContext('2d'),W=0,H=0,planes=[],wait=.4,last=0,raf=0,onscreen=false,col='229,154,126';
   var SEP=48,TRAIL=7,STEP=.25,mq=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)');
