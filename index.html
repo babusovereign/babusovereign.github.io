@@ -775,8 +775,11 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
   function entry(P){for(var i=0;i<P.p.length;i++)if(inView(P.p[i],150))return Math.max(0,P.L[i]-30);return 0}
   function sync(groups,X){var ds=groups.map(function(g){return (distTo(g.path,X)-g.d)/g.v}),mx=Math.max.apply(null,ds),gap=rnd(.55,.8);groups.forEach(function(g,i){g.delay=mx-ds[i]+i*gap})}
   /* Deconfliction: fly the whole act ahead of time and reject it if any two jets would ever touch */
-  function safe(groups){var k=W<600?1:1.4,min=30*k,st=groups.map(function(g){return{d:g.d,delay:g.delay}}),dt=.04;
-    for(var t=0;t<60;t+=dt){var pts=[],alive=0;groups.forEach(function(g,gi){var q=st[gi];if(q.delay>0){q.delay-=dt;alive++;return}q.d+=g.v*dt;if(q.d>=g.path.len+900)return;alive++;var keep=g.d;g.d=q.d;for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i);J.g=gi;J.i=i;pts.push(J)}g.d=keep});
+  function safe(groups){var k=W<600?1:1.4,min=30*k,st=groups.map(function(g){return{d:g.d,delay:g.delay}}),dt=.04,prev={},bad=false;
+    for(var t=0;t<60;t+=dt){var pts=[],alive=0;groups.forEach(function(g,gi){var q=st[gi];if(q.delay>0){q.delay-=dt;alive++;return}q.d+=g.v*dt;if(q.d>=g.path.len+900)return;alive++;var keep=g.d;g.d=q.d;for(var i=0;i<g.trails.length;i++){var J=jetAt(g,i),key=gi+':'+i,pv=prev[key];J.g=gi;J.i=i;pts.push(J);prev[key]=J;
+        /* No reversing and no jerks: every jet keeps at least 40% of the formation's speed along its own nose, and never swings its nose faster than 2 rad/s */
+        if(pv){var fwd=((J.x-pv.x)*Math.cos(J.h)+(J.y-pv.y)*Math.sin(J.h))/(g.v*dt),turn=Math.abs(Math.atan2(Math.sin(J.h-pv.h),Math.cos(J.h-pv.h)))/dt;if(fwd<.4||turn>2)bad=true}}g.d=keep});
+      if(bad)return false;
       for(var a=0;a<pts.length;a++)for(var b=a+1;b<pts.length;b++){var lim=pts[a].g===pts[b].g?min*.75:min*1.6;if(Math.hypot(pts[a].x-pts[b].x,pts[a].y-pts[b].y)<lim)return false}
       if(!alive)break}return true}
   function V(){return W<600?125:170}
@@ -791,7 +794,11 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
     opposingSolos:{w:2,run:function(){var c=seal(),X=Math.random()<.45?[c.x,c.y]:[W*rnd(.25,.6),H*rnd(.3,.7)],s=Math.random()<.5?0:2;
       var g=[grp({shape:'single',path:route({from:s,to:opp(s),via:X}),v:V()*1.35,knife:true}),grp({shape:'single',path:route({from:opp(s),to:s,via:X}),v:V()*1.35,knife:true})];g.forEach(function(x){x.X=X});sync(g,X);return g}},
     deltaBreakout:{w:1,run:function(){return[grp({shape:'delta',path:route({bend:1}),v:V(),f:[[0,1],[.4,1],[.85,5],[1,6]]})]}},
-    splitRejoin:{w:1,join:true,run:function(){var c=seal(),first=!show.count,P=first?spline([[-O,H*.32],[W*.22,H*.26],[W*.48,H*.34],[c.x,c.y],[W+O,c.y+H*.12]]):route({bend:1});
+    splitRejoin:{w:1,join:true,run:function(){var c=seal(),first=!show.count,phone=W<600;
+      /* Phones: the portrait sits below the text, so the opening flies one straight diagonal instead of turning toward it (any bend there would make a wide-spread wing jet fall back) */
+      if(first&&phone){var Q=spline([[-O,H*.06],[W*.2,H*.06+(W*.2+O)/(W+2*O)*H*.74],[W*.8,H*.06+(W*.8+O)/(W+2*O)*H*.74],[W+O,H*.8]]),a=-1,b=0;for(var n=0;n<Q.p.length;n++)if(inView(Q.p[n],0)){if(a<0)a=Q.L[n];b=Q.L[n]}a/=Q.len;b/=Q.len;var s=b-a;
+        return[grp({shape:'delta',path:Q,v:V()*.75,f:[[0,1],[a+.08*s,1],[a+.38*s,3],[a+.55*s,3],[a+.85*s,1],[1,1]]})]}
+      var P=first?spline([[-O,H*.32],[W*.22,H*.26],[W*.48,H*.34],[c.x,c.y],[W+O,c.y+H*.12]]):route({bend:1});
       /* On first load the split happens in plain view over the left half and the jets rejoin before sliding behind the portrait */
       return[grp({shape:'delta',path:P,v:V()*(first?.85:1),f:first?[[0,1],[.12,1],[.36,4],[.5,4],[.72,1],[1,1]]:[[0,1],[.15,1],[.42,4],[.7,1],[1,1]]})]}},
     joinUp:{w:1,join:true,run:function(){return[grp({shape:'delta',path:route({bend:1}),v:V(),f:[[0,5],[.5,1],[1,1]]})]}},
