@@ -281,14 +281,14 @@ footer{padding:40px 20px 56px;text-align:center;color:var(--muted);font-size:.9r
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--skytop:#06101d;--skyhi:#08142a;--skymid:#0b1a2c;--skylow:#14283b}}
 :root[data-theme="dark"]{--skytop:#06101d;--skyhi:#08142a;--skymid:#0b1a2c;--skylow:#14283b}
 /* Dark mode: teal behind the portrait on every layout */
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #site-desktop .portraitseal img{background:#3c8f89}}
-:root[data-theme="dark"] #site-desktop .portraitseal img{background:#3c8f89}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #site-desktop .portraitseal img{background:#2a6662}}
+:root[data-theme="dark"] #site-desktop .portraitseal img{background:#2a6662}
 @media (min-width:921px),(orientation:landscape){
 .herosky{background:linear-gradient(to bottom,var(--skytop) 0%,var(--skyhi) 30%,var(--skymid) 60%,var(--skylow) 100%)}
 /* Portrait over the sky: warm sunlit sand by day, teal by night */
 #site-desktop .herosky .portraitseal{background:#fbf5e8}#site-desktop .herosky .portraitseal img{background:#f3e6c9}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #site-desktop .herosky .portraitseal{background:#1b1f24}:root:not([data-theme="light"]) #site-desktop .herosky .portraitseal img{background:#3c8f89}}
-:root[data-theme="dark"] #site-desktop .herosky .portraitseal{background:#1b1f24}:root[data-theme="dark"] #site-desktop .herosky .portraitseal img{background:#3c8f89}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #site-desktop .herosky .portraitseal{background:#1b1f24}:root:not([data-theme="light"]) #site-desktop .herosky .portraitseal img{background:#2a6662}}
+:root[data-theme="dark"] #site-desktop .herosky .portraitseal{background:#1b1f24}:root[data-theme="dark"] #site-desktop .herosky .portraitseal img{background:#2a6662}
 /* Light mode: the clear-day blue is strong, so this block once deepened the small text; by choice it now uses the same colours as mobile (soft greeting, amber title, rust tagline), below 4.5:1 contrast on the sky */
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]) #site-desktop .navbar,:root:not([data-theme="dark"]) #site-desktop .herosky{--muted:#625649;--goldtext:#7d6020}
 :root:not([data-theme="dark"]) #site-desktop .herosky .hero .promise{color:#8e3826}}
