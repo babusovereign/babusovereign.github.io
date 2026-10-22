@@ -105,9 +105,22 @@
   .plane { transition:transform .2s; filter:drop-shadow(0 0 4px currentColor); }
   .plane.sel { filter:drop-shadow(0 0 10px #fff); }
 
+  .grab { display:none; }
   @media (max-width:760px) {
     .panel { top:auto; left:8px; right:8px; bottom:8px; width:auto; height:48vh; }
     .hud { top:8px; left:8px; padding:10px 14px; } .legend { display:none; }
+    /* show/hide chat (phones only) */
+    .grab { display:flex; flex-direction:column; align-items:center; gap:4px; width:100%; border:0; border-bottom:1px solid var(--line);
+            background:transparent; color:var(--muted); padding:7px 0 6px; cursor:pointer; font:500 11px "JetBrains Mono",monospace;
+            letter-spacing:.12em; text-transform:uppercase; }
+    .grab i { display:block; width:36px; height:4px; border-radius:2px; background:rgba(255,255,255,.25); }
+    .panel.min { height:auto; }
+    .panel.min .scroll, .panel.min .ask { display:none; }
+    .panel.min .grab { border-bottom:0; padding:9px 0; color:var(--text); }
+    /* keep the map credit and zoom buttons above the panel */
+    .leaflet-bottom { bottom:calc(48vh + 8px); }
+    body.chatmin .leaflet-bottom { bottom:60px; }
+    .askbox input { font-size:16px; }   /* 16px+ stops iPhone Safari zooming in on focus */
   }
   .fineprint { font-size:11px; line-height:1.5; color:var(--muted); margin:6px 0 0; }
   .fineprint a { color:var(--muted); }
@@ -128,7 +141,8 @@
   <div class="hudlinks"><a href="/builds/">← Builds</a><a href="https://github.com/babusovereign/skywatch" target="_blank" rel="noopener">Source ↗</a><a href="https://www.youtube.com/watch?v=rLcXh3crHt8" target="_blank" rel="noopener">Video ↗</a></div>
 </div>
 
-<aside class="panel">
+<aside class="panel" id="panel">
+  <button class="grab" id="grab" type="button" aria-expanded="true" aria-controls="scroll"><i></i><span id="grabt">Hide chat</span></button>
   <div class="scroll" id="scroll">
     <div id="sel"></div>
     <div id="feed"></div>
@@ -332,6 +346,7 @@ function renderStats() {
 // ---------- selection + instant briefing (built in the page from public data; no AI) ----------
 function select(id, fly) {
   const f = ALL.find(x => x.id === id); if (!f) return; selected = f;
+  setChatMin(false);
   if (fly) { const p = planes.get(id), [la, lo] = p ? posOf(p, performance.now()) : [f.lat, f.lon]; map.flyTo([la, lo], Math.max(map.getZoom(), 8), { duration:.8 }); }
   renderSel(true);
 }
@@ -431,6 +446,16 @@ async function ask(q) {
 }
 $("#askf").onsubmit = e => { e.preventDefault(); const q = $("#askq").value.trim(); if (!q) return; $("#askq").value = ""; ask(q); };
 document.querySelectorAll(".chip").forEach(c => c.onclick = () => ask(c.textContent));
+
+// ---------- phones: hide the chat to see the whole map; shorter placeholder ----------
+function setChatMin(min) {
+  $("#panel").classList.toggle("min", min); document.body.classList.toggle("chatmin", min);
+  $("#grab").setAttribute("aria-expanded", String(!min)); $("#grabt").textContent = min ? "Show chat" : "Hide chat";
+}
+$("#grab").onclick = () => setChatMin(!$("#panel").classList.contains("min"));
+const phone = matchMedia("(max-width:760px)");
+const fitPhone = () => { $("#askq").placeholder = phone.matches ? "Ask about flights or weather…" : "Ask about flights, airports or weather…"; if (!phone.matches) setChatMin(false); };
+phone.addEventListener("change", fitPhone); fitPhone();
 
 load().catch(e => { $("#hudmeta").textContent = "Couldn't load flights: " + e.message; });
 </script>
