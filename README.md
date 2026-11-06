@@ -8,7 +8,8 @@ Personal site of Babu Sovereign Perumalla, served by GitHub Pages at
 - `/` (`index.html`): home, with the animated San Francisco sky hero (air show, night traffic, bridges, skyline).
 - `/builds/` (`builds/index.html`): Builds.
 - `/ledger/` (`ledger/index.html`): The ledger.
-- `/bsp_resume.pdf`: résumé PDF, a stable link for sharing. Replace the file in place to update it; keep the name so old links keep working.
+- `/resume.pdf`: résumé PDF, a stable link for sharing by hand. Replace the file in place to update it; keep the name so old links keep working. It is deliberately not linked from any page, and `robots.txt` asks crawlers to skip it (GitHub Pages cannot send an `X-Robots-Tag` header, so that is the strongest signal available here).
+- `robots.txt`: crawler rules; currently only keeps `/resume.pdf` out.
 
 Each page is one hand-written HTML file with its CSS and page-specific JS inline.
 
